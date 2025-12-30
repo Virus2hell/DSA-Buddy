@@ -78,6 +78,24 @@ export default function Auth() {
         if (error) throw error;
 
         if (data.user) {
+          // Create profile record in profiles table
+          const { error: profileError } = await supabase.from('profiles').insert({
+            user_id: data.user.id,
+            full_name: fullName.trim(),
+            skill_level: skillLevel!,
+            role: role!,
+            preferred_language: language!,
+          });
+
+          if (profileError) {
+            console.error('Profile creation error:', profileError);
+            toast({
+              title: "Account created!",
+              description: "Profile creation failed. You can update it later.",
+              variant: "destructive",
+            });
+          }
+
           toast({
             title: "Account created successfully!",
             description: "Welcome to DSA Partner! Redirecting to dashboard...",

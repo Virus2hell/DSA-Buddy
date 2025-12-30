@@ -38,6 +38,75 @@ export type Database = {
           created_at?: string
         }
       }
+      friend_requests: {
+        Row: {
+          id: string
+          sender_id: string
+          receiver_id: string
+          status: 'pending' | 'accepted' | 'rejected'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          sender_id: string
+          receiver_id: string
+          status?: 'pending'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          sender_id?: string
+          receiver_id?: string
+          status?: 'pending' | 'accepted' | 'rejected'
+          created_at?: string
+        }
+      }
+      friends: {
+        Row: {
+          id: string
+          user_id_1: string
+          user_id_2: string
+          accepted_at: string
+        }
+        Insert: {
+          id?: string
+          user_id_1: string
+          user_id_2: string
+          accepted_at?: string
+        }
+        Update: {
+          id?: string
+          user_id_1?: string
+          user_id_2?: string
+          accepted_at?: string
+        }
+      }
+      messages: {
+        Row: {
+          id: string
+          chat_id: string
+          sender_id: string
+          receiver_id: string
+          message: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          chat_id: string
+          sender_id: string
+          receiver_id: string
+          message: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          chat_id?: string
+          sender_id?: string
+          receiver_id?: string
+          message?: string
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

@@ -34,31 +34,32 @@ export default function Discover() {
   const [roleFilter, setRoleFilter] = useState("All");
   const [languageFilter, setLanguageFilter] = useState("All");
 
-  // Replace the existing fetchProfiles function with this:
-const fetchProfiles = useCallback(async () => {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const currentUserId = session?.user?.id;
+  // Fetch profiles excluding current user
+  const fetchProfiles = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUserId = session?.user?.id;
 
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .neq('user_id', currentUserId!)  // Exclude current user
-      .order("created_at", { ascending: false });
+      if (!currentUserId) return;
 
-    if (error) throw error;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .neq('user_id', currentUserId)
+        .order("created_at", { ascending: false });
 
-    setProfiles(data || []);
-  } catch (error: any) {
-    console.error("Error fetching profiles:", error);
-    toast({
-      title: "Error loading profiles",
-      description: error.message,
-      variant: "destructive",
-    });
-  }
-}, [toast]);
+      if (error) throw error;
 
+      setProfiles(data || []);
+    } catch (error: any) {
+      console.error("Error fetching profiles:", error);
+      toast({
+        title: "Error loading profiles",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
 
   // Apply filters
   const applyFilters = useCallback(() => {
@@ -79,51 +80,45 @@ const fetchProfiles = useCallback(async () => {
     applyFilters();
   }, [applyFilters]);
 
-useEffect(() => {
-  applyFilters();
-}, [applyFilters]);
+  // Check auth and load profiles + real-time
+  useEffect(() => {
+    let channel: any;
 
-// Check auth and load profiles
-useEffect(() => {
-  let channel: any;
-
-  const checkUserAndLoad = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-      return;
-    }
-
-    await fetchProfiles();
-    setLoading(false);
-  };
-
-  checkUserAndLoad();
-
-  // Subscribe to ALL profile changes (fetchProfiles will filter current user)
-  channel = supabase
-    .channel("profiles")
-    .on(
-      "postgres_changes",
-      { 
-        event: "*", 
-        schema: "public", 
-        table: "profiles"
-      },
-      () => {
-        fetchProfiles();  // This already excludes current user
+    const checkUserAndLoad = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/auth");
+        return;
       }
-    )
-    .subscribe();
 
-  return () => {
-    if (channel) {
-      supabase.removeChannel(channel);
-    }
-  };
-}, [navigate, fetchProfiles]);
+      await fetchProfiles();
+      setLoading(false);
+    };
 
+    checkUserAndLoad();
 
+    // Subscribe to profile changes (fetchProfiles filters current user)
+    channel = supabase
+      .channel("profiles")
+      .on(
+        "postgres_changes",
+        { 
+          event: "*", 
+          schema: "public", 
+          table: "profiles"
+        },
+        () => {
+          fetchProfiles();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [navigate, fetchProfiles]);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -132,21 +127,72 @@ useEffect(() => {
     }
   };
 
-  const handleSendRequest = async (profileId: string, userName: string) => {
-    try {
-      // TODO: Implement actual request system later
+  // ✅ REAL FRIEND REQUEST SYSTEM
+  // ✅ FIXED REAL FRIEND REQUEST SYSTEM
+// Update function signature:
+const handleSendRequest = async (targetUserId: string, userName: string) => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const currentUserId = session?.user?.id;
+
+    if (!currentUserId || !targetUserId) return;
+
+    // Check if already friends
+    const { count: friendCount, error: friendError } = await supabase
+      .from('friends')
+      .select('*', { count: 'exact', head: true })
+      .or(`and(user_id_1.eq.${currentUserId},user_id_2.eq.${targetUserId}),and(user_id_1.eq.${targetUserId},user_id_2.eq.${currentUserId})`);
+
+    if (friendError) throw friendError;
+    if (friendCount && friendCount > 0) {
       toast({
-        title: "Partner request sent!",
-        description: `Your request has been sent to ${userName}. They will be notified soon.`,
+        title: "Already friends! 👥",
+        description: `You're already connected with ${userName}!`,
       });
-    } catch (error: any) {
-      toast({
-        title: "Error sending request",
-        description: error.message,
-        variant: "destructive",
-      });
+      return;
     }
-  };
+
+    // Check existing request
+    const { data: existing } = await supabase
+      .from('friend_requests')
+      .select('*')
+      .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${targetUserId}),and(sender_id.eq.${targetUserId},receiver_id.eq.${currentUserId})`)
+      .maybeSingle();
+
+    if (existing) {
+      toast({
+        title: "Request already sent",
+        description: existing.sender_id === currentUserId 
+          ? `You already sent a request to ${userName}`
+          : `${userName} already sent you a request`,
+      });
+      return;
+    }
+
+    // ✅ FIXED: Both IDs are now auth.users.id
+    const { error } = await supabase.from('friend_requests').insert({
+      sender_id: currentUserId,
+      receiver_id: targetUserId,  // ← This is profiles.user_id (auth.users.id)
+      status: 'pending'
+    });
+
+    if (error) throw error;
+
+    toast({
+      title: "✅ Request sent!",
+      description: `${userName} will see it in their Dashboard!`,
+    });
+  } catch (error: any) {
+    console.error("Request error:", error);
+    toast({
+      title: "Error",
+      description: error.message,
+      variant: "destructive",
+    });
+  }
+};
+
+
 
   if (loading) {
     return (
@@ -293,7 +339,7 @@ useEffect(() => {
                 <Button 
                   className="w-full" 
                   variant="outline"
-                  onClick={() => handleSendRequest(profile.id, profile.full_name)}
+                  onClick={() => handleSendRequest(profile.user_id, profile.full_name)}
                 >
                   <UserPlus className="w-4 h-4" />
                   Send Request

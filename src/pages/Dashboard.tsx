@@ -53,52 +53,52 @@ export default function Dashboard() {
 
 
   const fetchIncomingRequests = useCallback(async () => {
-  console.log('🔍 Fetching requests...');
-  
-  const { data: { session } } = await supabase.auth.getSession();
-  const userId = session?.user?.id;
-  
-  console.log('🔍 My user ID:', userId);
-  
-  if (!userId) return;
+    console.log('🔍 Fetching requests...');
 
-  // ✅ STEP 1: Get pending requests for ME
-  const { data: requests, error: reqError } = await supabase
-    .from('friend_requests')
-    .select('id, sender_id, status, created_at')
-    .eq('receiver_id', userId)
-    .eq('status', 'pending');
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
 
-  if (reqError || !requests || requests.length === 0) {
-    console.log('✅ No pending requests');
-    setIncomingRequests([]);
-    return;
-  }
+    console.log('🔍 My user ID:', userId);
 
-  console.log('🔍 Found requests:', requests);
+    if (!userId) return;
 
-  // ✅ STEP 2: Get sender profiles
-  const senderIds = requests.map(r => r.sender_id);
-  const { data: senderProfiles, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, user_id, full_name, skill_level')
-    .in('user_id', senderIds);
+    // ✅ STEP 1: Get pending requests for ME
+    const { data: requests, error: reqError } = await supabase
+      .from('friend_requests')
+      .select('id, sender_id, status, created_at')
+      .eq('receiver_id', userId)
+      .eq('status', 'pending');
 
-  console.log('🔍 Sender profiles:', senderProfiles);
+    if (reqError || !requests || requests.length === 0) {
+      console.log('✅ No pending requests');
+      setIncomingRequests([]);
+      return;
+    }
 
-  // ✅ STEP 3: Combine data
-  const requestsWithProfiles = requests.map(req => {
-    const profile = senderProfiles?.find(p => p.user_id === req.sender_id);
-    return {
-      id: req.id,
-      sender_id: req.sender_id,
-      profiles: profile || { full_name: 'Unknown', skill_level: 'Unknown' }
-    };
-  });
+    console.log('🔍 Found requests:', requests);
 
-  setIncomingRequests(requestsWithProfiles);
-  console.log('✅ FINAL requests:', requestsWithProfiles);
-}, []);
+    // ✅ STEP 2: Get sender profiles
+    const senderIds = requests.map(r => r.sender_id);
+    const { data: senderProfiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, user_id, full_name, skill_level')
+      .in('user_id', senderIds);
+
+    console.log('🔍 Sender profiles:', senderProfiles);
+
+    // ✅ STEP 3: Combine data
+    const requestsWithProfiles = requests.map(req => {
+      const profile = senderProfiles?.find(p => p.user_id === req.sender_id);
+      return {
+        id: req.id,
+        sender_id: req.sender_id,
+        profiles: profile || { full_name: 'Unknown', skill_level: 'Unknown' }
+      };
+    });
+
+    setIncomingRequests(requestsWithProfiles);
+    console.log('✅ FINAL requests:', requestsWithProfiles);
+  }, []);
 
 
 
@@ -118,20 +118,21 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Handle accept/reject request
-  const handleRequestAction = async (requestId: string, senderId: string, action: 'accept' | 'reject') => {
+  const handleRequestAction = async (requestId: string, senderId: string, action: 'accepted' | 'rejected') => {
     try {
-      // Update request status
+      // Update request status (FIXED: 'accepted' not 'accept')
       const { error: updateError } = await supabase
         .from('friend_requests')
-        .update({ status: action })
+        .update({
+          status: action === 'accepted' ? 'accepted' : 'rejected'  // ✅ CORRECT VALUES
+        })
         .eq('id', requestId)
         .eq('receiver_id', user?.id);
 
       if (updateError) throw updateError;
 
-      if (action === 'accept') {
-        // Create friendship (ensure consistent ordering: smaller ID first)
+      if (action === 'accepted') {
+        // Create friendship (FIXED ordering)
         const user1 = user?.id!.localeCompare(senderId) < 0 ? user?.id! : senderId;
         const user2 = user?.id!.localeCompare(senderId) > 0 ? user?.id! : senderId;
 
@@ -144,15 +145,17 @@ export default function Dashboard() {
       }
 
       toast({
-        title: action === 'accept' ? '✅ Request accepted!' : '❌ Request rejected',
-        description: action === 'accept'
-          ? 'You can now chat with your new partner in Messages!'
-          : 'Request declined successfully.',
+        title: action === 'accepted' ? '✅ Partner accepted!' : '❌ Request rejected',
+        description: action === 'accepted'
+          ? 'Start chatting in Messages tab!'
+          : 'Request declined.',
       });
 
+      // Refresh data
       fetchIncomingRequests();
       fetchFriendsCount();
     } catch (error: any) {
+      console.error('Accept/Reject error:', error);
       toast({
         title: 'Error processing request',
         description: error.message,
@@ -160,6 +163,8 @@ export default function Dashboard() {
       });
     }
   };
+
+
 
   // ✅ FIXED: Real-time subscription (no filter needed in subscription)
   useEffect(() => {
@@ -343,11 +348,20 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => handleRequestAction(req.id, req.sender_id, 'accept')}>
+                    <Button
+                      size="sm"
+                      onClick={() => handleRequestAction(req.id, req.sender_id, 'accepted')}  // ✅ 'accepted'
+                      className="bg-primary hover:bg-primary/90 h-9 px-4"
+                    >
                       Accept
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleRequestAction(req.id, req.sender_id, 'reject')}>
-                      Reject
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleRequestAction(req.id, req.sender_id, 'rejected')}  // ✅ 'rejected'
+                      className="h-9 px-3"
+                    >
+                      <X className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>

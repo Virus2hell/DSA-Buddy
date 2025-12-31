@@ -11,11 +11,16 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center">
-              <Code2 className="w-5 h-5 text-primary-foreground" />
+            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
+              <img
+                src="/logo.png"  // Fixed path - place in public/logo.png
+                alt="DSA Partner"
+                className="w-full h-full object-cover rounded-xl drop-shadow-lg"
+              />
             </div>
-            <span className="text-xl font-bold">DSA Partner</span>
+            <span className="text-xl font-bold">DSA Socio</span>
           </Link>
+
 
           <nav className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">

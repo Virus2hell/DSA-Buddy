@@ -7,17 +7,11 @@ export function Hero() {
     <section className="pt-32 pb-20 px-4">
       <div className="container mx-auto">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-8 animate-fade-in">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-            </span>
-            Join 1,000+ developers practicing together
-          </div>
 
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6 animate-fade-in">
-            Find Your Perfect{" "}
-            <span className="text-gradient">DSA Partner</span>
+            Find Your Perfect
+            <h1 className="text-4xl md:text-6xl font-bold lg:text-7xl text-gradient leading-tight mb-6 animate-fade-in">DSA Partner</h1>
+            {/* <span className="text-gradient">DSA Partner</span> */}
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-in">

@@ -11,7 +11,6 @@ export function Hero() {
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6 animate-fade-in">
             Find Your Perfect
             <h1 className="text-4xl md:text-6xl font-bold lg:text-7xl text-gradient leading-tight mb-6 animate-fade-in">DSA Partner</h1>
-            {/* <span className="text-gradient">DSA Partner</span> */}
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-in">

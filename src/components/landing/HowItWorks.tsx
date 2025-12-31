@@ -49,13 +49,12 @@ export function HowItWorks() {
             {steps.map((step, index) => (
               <div
                 key={step.step}
-                className={`step-item flex flex-col md:flex-row items-center gap-8 ${
+                className={`flex flex-col md:flex-row items-center gap-8 ${
                   index % 2 === 1 ? "md:flex-row-reverse" : ""
                 }`}
-                data-step={index}
               >
                 {/* Content Card */}
-                <div className="flex-1 step-content">
+                <div className="flex-1">
                   <div className={`p-6 rounded-xl bg-card shadow-card border border-border hover:shadow-glow hover:border-primary/50 transition-all duration-300 ${index % 2 === 1 ? "md:text-right" : ""}`}>
                     <span className="text-sm font-medium text-primary mb-2 inline-block">Step {step.step}</span>
                     <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
@@ -64,7 +63,7 @@ export function HowItWorks() {
                 </div>
 
                 {/* Icon */}
-                <div className="relative z-10 step-icon flex-shrink-0">
+                <div className="relative z-10 flex-shrink-0">
                   <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center shadow-glow hover:scale-110 transition-all duration-300">
                     <step.icon className="w-7 h-7 text-primary-foreground" />
                   </div>

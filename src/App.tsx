@@ -21,30 +21,9 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  // Smooth scroll behavior for anchor links
+  // Smooth scroll behavior for anchor links (kept)
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth";
-  }, []);
-
-  // Scroll animations for HowItWorks steps
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("animate");
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    // Observe all step items
-    document.querySelectorAll(".step-item").forEach((item) => {
-      observer.observe(item);
-    });
-
-    return () => observer.disconnect();
   }, []);
 
   return (

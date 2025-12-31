@@ -14,7 +14,7 @@ export function CTA() {
               Ready to Level Up Your DSA Skills?
             </h2>
             <p className="text-lg text-primary-foreground/80 max-w-2xl mx-auto mb-8">
-              Join thousands of developers who are mastering algorithms together. Your perfect study partner is just a click away.
+              See why developers choose partners over solo grinding every time
             </p>
             <Button size="xl" variant="secondary" asChild className="bg-background text-foreground hover:bg-background/90">
               <Link to="/auth?mode=signup">

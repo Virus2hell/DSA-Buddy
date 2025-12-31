@@ -180,7 +180,7 @@ export default function Auth() {
         </div>
 
         <div className="relative z-10 text-primary-foreground/60 text-sm">
-          © {new Date().getFullYear()} DSA Partner
+          © {new Date().getFullYear()} DSA Socio
         </div>
       </div>
 

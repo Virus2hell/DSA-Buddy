@@ -34,7 +34,7 @@ export function Benefits() {
             <span className="text-gradient">Together?</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            The data speaks for itself — collaborative learning leads to better outcomes.
+            Stop studying alone. Start mastering DSA with the perfect partner.
           </p>
         </div>
 

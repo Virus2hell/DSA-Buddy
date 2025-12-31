@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Code2, ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -16,10 +16,10 @@ export default function Auth() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [isSignup, setIsSignup] = useState(searchParams.get("mode") === "signup");
   const [loading, setLoading] = useState(false);
-  
+
   // Form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -85,7 +85,7 @@ export default function Auth() {
             skill_level: skillLevel!,
             role: role!,
             preferred_language: language!,
-          }] as any);
+          } as any]);
 
           if (profileError) {
             console.error('Profile creation error:', profileError);
@@ -98,9 +98,9 @@ export default function Auth() {
 
           toast({
             title: "Account created successfully!",
-            description: "Welcome to DSA Partner! Redirecting to dashboard...",
+            description: "Welcome to DSA Socio! Redirecting to dashboard...",
           });
-          
+
           // If email confirmation is NOT required in Supabase settings, user is already signed in
           // Check if session exists after signup
           const { data: { session } } = await supabase.auth.getSession();
@@ -160,11 +160,16 @@ export default function Auth() {
       {/* Left side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 gradient-primary p-12 flex-col justify-between relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent)]" />
-        
+
         <div className="relative z-10">
+          {/* ✅ DESKTOP LOGO - Updated with image */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-primary-foreground/20 flex items-center justify-center">
-              <Code2 className="w-6 h-6 text-primary-foreground" />
+            <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center">
+              <img
+                src="/logo.png"
+                alt="DSA Socio"
+                className="w-full h-full object-cover rounded-lg drop-shadow-lg"
+              />
             </div>
             <span className="text-2xl font-bold text-primary-foreground">DSA Socio</span>
           </Link>
@@ -195,11 +200,16 @@ export default function Auth() {
             Back to home
           </Link>
 
+          {/* ✅ MOBILE LOGO - Already correct */}
           <div className="lg:hidden flex items-center gap-2 mb-8">
-            <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center">
-              <Code2 className="w-5 h-5 text-primary-foreground" />
+            <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center p-1">
+              <img
+                src="/logo.png"
+                alt="DSA Socio"
+                className="w-full h-full object-cover rounded-xl drop-shadow-lg"
+              />
             </div>
-            <span className="text-xl font-bold">DSA Partner</span>
+            <span className="text-xl font-bold">DSA Socio</span>
           </div>
 
           <h2 className="text-2xl font-bold mb-2">

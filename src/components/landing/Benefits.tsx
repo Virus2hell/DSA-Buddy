@@ -8,12 +8,6 @@ const benefits = [
     description: "Learn twice as fast with a study partner who keeps you accountable",
   },
   {
-    icon: Clock,
-    title: "Consistent Practice",
-    stat: "87%",
-    description: "of users report more consistent daily practice with a partner",
-  },
-  {
     icon: Target,
     title: "Better Understanding",
     stat: "95%",

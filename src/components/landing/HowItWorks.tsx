@@ -42,34 +42,35 @@ export function HowItWorks() {
         </div>
 
         <div className="relative max-w-4xl mx-auto">
-          <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-border -translate-x-1/2" />
+          {/* Center line */}
+          <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-primary/30 to-transparent -translate-x-1/2" />
 
           <div className="space-y-12">
             {steps.map((step, index) => (
               <div
                 key={step.step}
-                className={`flex flex-col md:flex-row items-center gap-8 ${
+                className={`step-item flex flex-col md:flex-row items-center gap-8 ${
                   index % 2 === 1 ? "md:flex-row-reverse" : ""
                 }`}
+                data-step={index}
               >
-                <div className="flex-1 text-center md:text-left">
-                  <div
-                    className={`p-6 rounded-xl bg-card shadow-card ${
-                      index % 2 === 1 ? "md:text-right" : ""
-                    }`}
-                  >
-                    <span className="text-sm font-medium text-primary">Step {step.step}</span>
-                    <h3 className="text-xl font-semibold mt-1 mb-2">{step.title}</h3>
-                    <p className="text-muted-foreground">{step.description}</p>
+                {/* Content Card */}
+                <div className="flex-1 step-content">
+                  <div className={`p-6 rounded-xl bg-card shadow-card border border-border hover:shadow-glow hover:border-primary/50 transition-all duration-300 ${index % 2 === 1 ? "md:text-right" : ""}`}>
+                    <span className="text-sm font-medium text-primary mb-2 inline-block">Step {step.step}</span>
+                    <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed">{step.description}</p>
                   </div>
                 </div>
 
-                <div className="relative z-10">
-                  <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center shadow-glow">
+                {/* Icon */}
+                <div className="relative z-10 step-icon flex-shrink-0">
+                  <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center shadow-glow hover:scale-110 transition-all duration-300">
                     <step.icon className="w-7 h-7 text-primary-foreground" />
                   </div>
                 </div>
 
+                {/* Spacer */}
                 <div className="flex-1 hidden md:block" />
               </div>
             ))}

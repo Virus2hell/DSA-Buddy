@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import {
-  Code2, MessageCircle, Send, LogOut, Search, Users, ChevronLeft
+  Code2, MessageCircle, Send, LogOut, Search, Users
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -37,13 +37,11 @@ export default function Messages() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageInput, setMessageInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // ✅ NEW: Collapsible sidebar
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentUserIdRef = useRef<string>("");
   const pusherRef = useRef<any>(null);
 
-  // ... (keep all your existing useEffect, fetchPartners, fetchMessages, sendMessage exactly the same)
-
+  // 1. Init Pusher + partners
   useEffect(() => {
     let mounted = true;
     const initPusher = async () => {
@@ -78,6 +76,16 @@ export default function Messages() {
       pusherRef.current?.disconnect();
     };
   }, []);
+
+  // 2. ✅ FIXED: Load message history when partner selected
+  useEffect(() => {
+    if (selectedPartner?.user_id && currentUserIdRef.current) {
+      console.log('📥 Loading history for:', selectedPartner.full_name);
+      fetchMessages(selectedPartner.user_id);
+    } else {
+      setMessages([]);
+    }
+  }, [selectedPartner?.user_id]);
 
   const fetchPartners = useCallback(async () => {
     if (!currentUserIdRef.current) return;
@@ -126,6 +134,7 @@ export default function Messages() {
     }
   }, []);
 
+  // 3. Pusher subscription
   useEffect(() => {
     if (!selectedPartner || !pusherRef.current || !currentUserIdRef.current) return;
 
@@ -166,18 +175,16 @@ export default function Messages() {
       const { data, error } = await supabase
         .from('messages')
         .select('*')
-        .or(
-          `and(sender_id.eq.${currentUserIdRef.current},receiver_id.eq.${partnerId}),` +
-          `and(sender_id.eq.${partnerId},receiver_id.eq.${currentUserIdRef.current})`
-        )
+        .eq('chat_id', selectedPartner?.id)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
       setMessages(data || []);
+      console.log('✅ Loaded', data?.length || 0, 'messages from DB');
     } catch (error: any) {
       console.error('❌ Fetch messages failed:', error);
     }
-  }, []);
+  }, [selectedPartner?.id]);
 
   const sendMessage = async () => {
     if (!messageInput.trim() || !selectedPartner || !currentUserIdRef.current) return;
@@ -213,7 +220,7 @@ export default function Messages() {
       if (!response.ok) throw new Error('Failed to send');
 
       const realMsg = await response.json();
-
+      
       setMessages(prev => prev.map(msg =>
         msg.id === tempId ? { ...realMsg, sender_name: "You" } : msg
       ));

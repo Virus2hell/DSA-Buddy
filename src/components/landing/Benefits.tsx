@@ -1,4 +1,4 @@
-import { TrendingUp, Clock, Target, Heart } from "lucide-react";
+import { TrendingUp, Target, Heart } from "lucide-react";
 
 const benefits = [
   {
@@ -35,17 +35,17 @@ export function Benefits() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {benefits.map((benefit) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          {benefits.map((benefit, index) => (
             <div
               key={benefit.title}
-              className="p-6 rounded-xl bg-background border border-border text-center hover:shadow-lg transition-all duration-300"
+              className="p-6 rounded-xl bg-background border border-border text-center hover:shadow-lg hover:border-primary/50 transition-all duration-300 group style={{ animationDelay: `${index * 0.1}s` }}"
             >
-              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <benefit.icon className="w-7 h-7 text-primary" />
+              <div className="w-14 h-14 rounded-full bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center mx-auto mb-4 transition-colors">
+                <benefit.icon className="w-7 h-7 text-primary group-hover:scale-110 transition-transform" />
               </div>
-              <p className="text-4xl font-bold text-gradient mb-2">{benefit.stat}</p>
-              <h3 className="text-lg font-semibold mb-2">{benefit.title}</h3>
+              <p className="text-4xl font-bold text-gradient mb-2 group-hover:scale-105 transition-transform">{benefit.stat}</p>
+              <h3 className="text-lg font-semibold mb-2 text-foreground">{benefit.title}</h3>
               <p className="text-sm text-muted-foreground">{benefit.description}</p>
             </div>
           ))}

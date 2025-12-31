@@ -170,11 +170,11 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
     }
 
     // ✅ FIXED: Both IDs are now auth.users.id
-    const { error } = await supabase.from('friend_requests').insert({
+    const { error } = await supabase.from('friend_requests').insert([{
       sender_id: currentUserId,
       receiver_id: targetUserId,  // ← This is profiles.user_id (auth.users.id)
       status: 'pending'
-    });
+    }] as any);
 
     if (error) throw error;
 

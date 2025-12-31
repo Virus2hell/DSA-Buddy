@@ -51,7 +51,6 @@ export default function Dashboard() {
     }
   }, []);
 
-
   const fetchIncomingRequests = useCallback(async () => {
     console.log('🔍 Fetching requests...');
 
@@ -100,9 +99,6 @@ export default function Dashboard() {
     console.log('✅ FINAL requests:', requestsWithProfiles);
   }, []);
 
-
-
-
   // Fetch friends count
   const fetchFriendsCount = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -120,11 +116,11 @@ export default function Dashboard() {
 
   const handleRequestAction = async (requestId: string, senderId: string, action: 'accepted' | 'rejected') => {
     try {
-      // Update request status (FIXED: 'accepted' not 'accept')
+      // Update request status
       const { error: updateError } = await supabase
         .from('friend_requests')
         .update({
-          status: action === 'accepted' ? 'accepted' : 'rejected'  // ✅ CORRECT VALUES
+          status: action === 'accepted' ? 'accepted' : 'rejected'
         })
         .eq('id', requestId)
         .eq('receiver_id', user?.id);
@@ -132,28 +128,76 @@ export default function Dashboard() {
       if (updateError) throw updateError;
 
       if (action === 'accepted') {
-        // Create friendship (FIXED ordering)
+        // Create friendship (consistent ordering: lexicographically smaller first)
         const user1 = user?.id!.localeCompare(senderId) < 0 ? user?.id! : senderId;
         const user2 = user?.id!.localeCompare(senderId) > 0 ? user?.id! : senderId;
 
-        const { error: friendError } = await supabase.from('friends').insert({
-          user_id_1: user1,
-          user_id_2: user2
-        });
+        // ✅ FIXED: Get the friend record ID to use as chat_id
+        const { data: newFriend, error: friendError } = await supabase
+          .from('friends')
+          .insert({
+            user_id_1: user1,
+            user_id_2: user2
+          })
+          .select()
+          .single();
 
         if (friendError) throw friendError;
+        if (!newFriend) throw new Error('Failed to create friendship');
+
+        const chatId = newFriend.id; // ✅ Use friend record ID as chat_id (consistent!)
+
+        // ✅ FIXED: Match DB schema EXACTLY (no sender_name)
+        const { error: msg1Error } = await supabase.from('messages').insert({
+          chat_id: chatId,
+          sender_id: user?.id!,
+          receiver_id: senderId,
+          message: `🎉 Hi! Let's start practicing DSA together! Ready to solve some problems? 😊`
+        });
+
+        const { error: msg2Error } = await supabase.from('messages').insert({
+          chat_id: chatId,
+          sender_id: senderId,
+          receiver_id: user?.id!,
+          message: `Great! I'm ready too 🚀 What problem should we tackle first?`
+        });
+
+        if (msg1Error || msg2Error) {
+          console.error('Messages failed:', msg1Error || msg2Error);
+          // Don't fail friendship - messages optional
+        }
+
+        // ✅ PUSHER NOTIFICATION (Backend route)
+        try {
+          const channelName = `chat-${[user?.id!, senderId].sort().join('-')}`;
+          await fetch('http://localhost:5000/api/messages/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              channel: channelName,
+              event: 'new_chat',
+              chat_id: chatId,
+              users: [user?.id!, senderId]
+            })
+          });
+          console.log('🔔 Pusher notified:', channelName);
+        } catch (e) {
+          console.log('Pusher notify optional');
+        }
+
+        console.log('✅ Chat room LIVE with chat_id:', chatId);
       }
 
       toast({
         title: action === 'accepted' ? '✅ Partner accepted!' : '❌ Request rejected',
         description: action === 'accepted'
-          ? 'Start chatting in Messages tab!'
-          : 'Request declined.',
+          ? '✅ Chat created! Check Messages tab 📱'
+          : 'Request declined successfully.',
+        duration: 4000
       });
 
       // Refresh data
-      fetchIncomingRequests();
-      fetchFriendsCount();
+      await Promise.all([fetchIncomingRequests(), fetchFriendsCount()]);
     } catch (error: any) {
       console.error('Accept/Reject error:', error);
       toast({
@@ -164,12 +208,8 @@ export default function Dashboard() {
     }
   };
 
-
-
-  // ✅ FIXED: Real-time subscription (no filter needed in subscription)
+  // ✅ FIXED: Real-time subscription (friends + requests)
   useEffect(() => {
-    let requestsChannel: any;
-
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
 
@@ -189,28 +229,35 @@ export default function Dashboard() {
 
     checkUser();
 
-    // ✅ FIXED: Real-time subscription for incoming requests
-    requestsChannel = supabase
-      .channel('incoming_requests')
+    // ✅ Subscribe to friend_requests AND friends table
+    const dashboardChannel = supabase
+      .channel('dashboard_updates')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'friend_requests',
-          filter: `receiver_id=eq.${user?.id}`
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'friend_requests', 
+          filter: `receiver_id=eq.${user?.id}` 
         },
-        () => {
-          fetchIncomingRequests();
-        }
+        fetchIncomingRequests
+      )
+      .on(
+        'postgres_changes',
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'friends',
+          filter: `or(user_id_1.eq.${user?.id},user_id_2.eq.${user?.id})`
+        },
+        fetchFriendsCount
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(requestsChannel);
+      supabase.removeChannel(dashboardChannel);
     };
   }, [navigate, fetchProfile, fetchIncomingRequests, fetchFriendsCount, user?.id]);
-
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -350,7 +397,7 @@ export default function Dashboard() {
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      onClick={() => handleRequestAction(req.id, req.sender_id, 'accepted')}  // ✅ 'accepted'
+                      onClick={() => handleRequestAction(req.id, req.sender_id, 'accepted')}
                       className="bg-primary hover:bg-primary/90 h-9 px-4"
                     >
                       Accept
@@ -358,7 +405,7 @@ export default function Dashboard() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleRequestAction(req.id, req.sender_id, 'rejected')}  // ✅ 'rejected'
+                      onClick={() => handleRequestAction(req.id, req.sender_id, 'rejected')}
                       className="h-9 px-3"
                     >
                       <X className="w-4 h-4" />
@@ -369,8 +416,6 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         )}
-
-
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -445,5 +490,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-

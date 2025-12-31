@@ -79,13 +79,13 @@ export default function Auth() {
 
         if (data.user) {
           // Create profile record in profiles table
-          const { error: profileError } = await supabase.from('profiles').insert({
+          const { error: profileError } = await supabase.from('profiles').insert([{
             user_id: data.user.id,
             full_name: fullName.trim(),
             skill_level: skillLevel!,
             role: role!,
             preferred_language: language!,
-          });
+          }] as any);
 
           if (profileError) {
             console.error('Profile creation error:', profileError);

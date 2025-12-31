@@ -107,6 +107,82 @@ export type Database = {
           created_at?: string
         }
       }
+      // ✅ NEW: DSA Folders
+      dsa_folders: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dsa_folders_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      // ✅ NEW: DSA Problems
+      dsa_problems: {
+        Row: {
+          id: string
+          folder_id: string
+          name: string
+          link: string
+          difficulty: 'easy' | 'medium' | 'hard'
+          note: string | null
+          solved: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          folder_id: string
+          name: string
+          link: string
+          difficulty?: 'easy' | 'medium' | 'hard'
+          note?: string | null
+          solved?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          folder_id?: string
+          name?: string
+          link?: string
+          difficulty?: 'easy' | 'medium' | 'hard'
+          note?: string | null
+          solved?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dsa_problems_folder_id_fkey"
+            columns: ["folder_id"]
+            referencedRelation: "dsa_folders"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
   }
 }
@@ -131,7 +207,12 @@ export type TablesInsert<
     ? T extends { Insert: any }
     ? T['Insert']
     : never
-    : never;
+    : never
+  : PublicTableNameOrOptions extends keyof Database['public']['Tables']
+  ? Database['public']['Tables'][PublicTableNameOrOptions] extends { Insert: infer I }
+  ? I
+  : never
+  : never
 
 export type TablesUpdate<
   PublicTableNameOrOptions extends
@@ -142,10 +223,10 @@ export type TablesUpdate<
       keyof Database[PublicTableNameOrOptions['schema']]['Tables'],
       string
     >] extends { Update: infer U }
-      ? U
-      : never)
+    ? U
+    : never)
   : PublicTableNameOrOptions extends keyof Database['public']['Tables']
   ? (Database['public']['Tables'][PublicTableNameOrOptions] extends { Update: infer U }
-      ? U
-      : never)
+    ? U
+    : never)
   : never

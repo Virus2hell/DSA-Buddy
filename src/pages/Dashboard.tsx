@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import {
   Code2, Users, BookOpen, MessageCircle, LogOut, Search,
-  CheckCircle2, Clock, TrendingUp, UserPlus, X
+  CheckCircle2, TrendingUp, UserPlus, X, RefreshCw
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +34,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [incomingRequests, setIncomingRequests] = useState<FriendRequest[]>([]);
   const [friendsCount, setFriendsCount] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Fetch profile from profiles table
   const fetchProfile = useCallback(async () => {
@@ -52,154 +53,188 @@ export default function Dashboard() {
   }, []);
 
   const fetchIncomingRequests = useCallback(async () => {
-    console.log('🔍 Fetching requests...');
+  console.log('🔍 Fetching requests...');
+  const { data: { session } } = await supabase.auth.getSession();
+  const userId = session?.user?.id;
 
+  console.log('🔍 My user ID:', userId);
+
+  if (!userId) return;
+
+  // STEP 1: Get pending requests for ME
+  const { data: requests, error: reqError } = await supabase
+    .from('friend_requests')
+    .select('id, sender_id, status, created_at')
+    .eq('receiver_id', userId)
+    .eq('status', 'pending');
+
+  if (reqError || !requests || requests.length === 0) {
+    console.log('✅ No pending requests');
+    setIncomingRequests([]);
+    return;
+  }
+
+  console.log('🔍 Found requests:', requests);
+
+  // STEP 2: Get sender profiles
+  const senderIds = requests.map(r => r.sender_id);
+  const { data: senderProfiles } = await supabase
+    .from('profiles')
+    .select('id, user_id, full_name, skill_level')
+    .in('user_id', senderIds);
+
+  console.log('🔍 Sender profiles:', senderProfiles);
+
+  // STEP 3: Combine data
+  const requestsWithProfiles = requests.map(req => {
+    const profile = senderProfiles?.find(p => p.user_id === req.sender_id);
+    return {
+      id: req.id,
+      sender_id: req.sender_id,
+      profiles: profile || { full_name: 'Unknown', skill_level: 'Unknown' }
+    };
+  });
+
+  setIncomingRequests(requestsWithProfiles);
+  console.log('✅ FINAL requests:', requestsWithProfiles);
+}, []);
+
+// ✅ BULLETPROOF COUNTS - Handle multiple friends correctly
+const fetchSharedSheetsCount = useCallback(async () => {
+  try {
     const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-
-    console.log('🔍 My user ID:', userId);
-
-    if (!userId) return;
-
-    // ✅ STEP 1: Get pending requests for ME
-    const { data: requests, error: reqError } = await supabase
-      .from('friend_requests')
-      .select('id, sender_id, status, created_at')
-      .eq('receiver_id', userId)
-      .eq('status', 'pending');
-
-    if (reqError || !requests || requests.length === 0) {
-      console.log('✅ No pending requests');
-      setIncomingRequests([]);
+    if (!session?.user?.id) {
+      setFriendsCount(0);
+      setSheetsCount(0);
       return;
     }
 
-    console.log('🔍 Found requests:', requests);
+    const userId = session.user.id;
+    console.log('🔍 Counting for:', userId);
 
-    // ✅ STEP 2: Get sender profiles
-    const senderIds = requests.map(r => r.sender_id);
-    const { data: senderProfiles, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, user_id, full_name, skill_level')
-      .in('user_id', senderIds);
-
-    console.log('🔍 Sender profiles:', senderProfiles);
-
-    // ✅ STEP 3: Combine data
-    const requestsWithProfiles = requests.map(req => {
-      const profile = senderProfiles?.find(p => p.user_id === req.sender_id);
-      return {
-        id: req.id,
-        sender_id: req.sender_id,
-        profiles: profile || { full_name: 'Unknown', skill_level: 'Unknown' }
-      };
-    });
-
-    setIncomingRequests(requestsWithProfiles);
-    console.log('✅ FINAL requests:', requestsWithProfiles);
-  }, []);
-
-  // Fetch friends count
-  const fetchFriendsCount = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user?.id) return;
-
-    const { count, error } = await supabase
+    // Count FRIENDS first
+    const { count: friendsCount } = await supabase
       .from('friends')
       .select('*', { count: 'exact', head: true })
-      .or(`user_id_1.eq.${session.user.id},user_id_2.eq.${session.user.id}`);
+      .or(`user_id_1.eq.${userId},user_id_2.eq.${userId}`);
 
-    if (!error && count !== null) {
-      setFriendsCount(count);
+    console.log('✅ Friends count:', friendsCount);
+
+    // Count SHEETS - Get ALL friend_ids for this user, then count sheets
+    const { data: userFriends } = await supabase
+      .from('friends')
+      .select('id')
+      .or(`user_id_1.eq.${userId},user_id_2.eq.${userId}`);
+
+    let sheetsCount = 0;
+    if (userFriends && userFriends.length > 0) {
+      const friendIds = userFriends.map(f => f.id);
+      
+      const { count } = await supabase
+        .from('shared_dsa_sheets')
+        .select('id', { count: 'exact', head: true })
+        .in('friend_id', friendIds);
+      
+      sheetsCount = count || 0;
     }
-  }, []);
+
+    console.log('✅ Friends:', friendsCount, 'Sheets:', sheetsCount);
+    
+    // Separate state updates (if you have setSheetsCount)
+    setFriendsCount(friendsCount || 0);
+    if (typeof setSheetsCount === 'function') {
+      setSheetsCount(sheetsCount);
+    } else {
+      // Fallback: use single state showing sheets (your original)
+      setFriendsCount(sheetsCount || friendsCount || 0);
+    }
+  } catch (error: any) {
+    console.error('❌ Count failed:', error);
+    setFriendsCount(0);
+  }
+}, []);
+
+
+  // ✅ MANUAL REFRESH
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([fetchProfile(), fetchIncomingRequests(), fetchSharedSheetsCount()]);
+    toast({ title: '🔄 Dashboard refreshed!' });
+  }, [fetchProfile, fetchIncomingRequests, fetchSharedSheetsCount, toast]);
+
+
 
   const handleRequestAction = async (requestId: string, senderId: string, action: 'accepted' | 'rejected') => {
     try {
       // Update request status
       const { error: updateError } = await supabase
         .from('friend_requests')
-        .update({
-          status: action === 'accepted' ? 'accepted' : 'rejected'
-        })
+        .update({ status: action === 'accepted' ? 'accepted' : 'rejected' })
         .eq('id', requestId)
         .eq('receiver_id', user?.id);
 
       if (updateError) throw updateError;
 
       if (action === 'accepted') {
-        // Create friendship (consistent ordering: lexicographically smaller first)
+        // Create friendship
         const user1 = user?.id!.localeCompare(senderId) < 0 ? user?.id! : senderId;
         const user2 = user?.id!.localeCompare(senderId) > 0 ? user?.id! : senderId;
 
-        // ✅ FIXED: Get the friend record ID to use as chat_id
         const { data: newFriend, error: friendError } = await supabase
           .from('friends')
-          .insert({
-            user_id_1: user1,
-            user_id_2: user2
-          })
+          .insert([{ user_id_1: user1, user_id_2: user2 }])
           .select()
           .single();
 
         if (friendError) throw friendError;
-        if (!newFriend) throw new Error('Failed to create friendship');
+        if (!newFriend || !newFriend.id) {
+          console.error('🚨 Friend insert returned no data', newFriend);
+          throw new Error('Failed to create friend');
+        }
+        console.log('✅ Friend created:', newFriend.id);
 
-        const chatId = newFriend.id; // ✅ Use friend record ID as chat_id (consistent!)
+        const chatId = newFriend.id;
 
-        // ✅ FIXED: Match DB schema EXACTLY (no sender_name)
-        const { error: msg1Error } = await supabase.from('messages').insert({
+        // Messages
+        await supabase.from('messages').insert({
           chat_id: chatId,
           sender_id: user?.id!,
           receiver_id: senderId,
           message: `🎉 Hi! Let's start practicing DSA together! Ready to solve some problems? 😊`
         });
 
-        const { error: msg2Error } = await supabase.from('messages').insert({
+        await supabase.from('messages').insert({
           chat_id: chatId,
           sender_id: senderId,
           receiver_id: user?.id!,
           message: `Great! I'm ready too 🚀 What problem should we tackle first?`
         });
 
-        if (msg1Error || msg2Error) {
-          console.error('Messages failed:', msg1Error || msg2Error);
-          // Don't fail friendship - messages optional
-        }
-
-        // ✅ PUSHER NOTIFICATION (Backend route)
-        try {
-          const channelName = `chat-${[user?.id!, senderId].sort().join('-')}`;
-          await fetch('http://localhost:5000/api/messages/notify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              channel: channelName,
-              event: 'new_chat',
-              chat_id: chatId,
-              users: [user?.id!, senderId]
-            })
+        // ✅ SIMPLE SHEET INSERT (no .single() to avoid errors)
+        const { error: sheetError } = await supabase
+          .from('shared_dsa_sheets')
+          .insert({
+            friend_id: chatId,
+            created_at: new Date().toISOString()
           });
-          console.log('🔔 Pusher notified:', channelName);
-        } catch (e) {
-          console.log('Pusher notify optional');
+
+        if (sheetError) {
+          console.error('🚨 SHEET FAILED (continuing):', sheetError);
+        } else {
+          console.log('✅ SHEET CREATED');
         }
 
-        console.log('✅ Chat room LIVE with chat_id:', chatId);
+        toast({
+          title: '✅ Partner accepted!',
+          description: 'Chat ready! Click Refresh for updated stats.',
+        });
+      } else {
+        toast({ title: '❌ Request rejected' });
       }
 
-      toast({
-        title: action === 'accepted' ? '✅ Partner accepted!' : '❌ Request rejected',
-        description: action === 'accepted'
-          ? '✅ Chat created! Check Messages tab 📱'
-          : 'Request declined successfully.',
-        duration: 4000
-      });
-
       // Refresh data
-      await Promise.all([fetchIncomingRequests(), fetchFriendsCount()]);
+      await handleRefresh();
     } catch (error: any) {
-      console.error('Accept/Reject error:', error);
+      console.error('Request error:', error);
       toast({
         title: 'Error processing request',
         description: error.message,
@@ -208,82 +243,37 @@ export default function Dashboard() {
     }
   };
 
-  // ✅ FIXED: Real-time subscription (friends + requests)
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
-
-      setUser(session.user);
-      await Promise.all([
-        fetchProfile(),
-        fetchIncomingRequests(),
-        fetchFriendsCount()
-      ]);
-      setLoading(false);
-    };
-
-    checkUser();
-
-    // ✅ Subscribe to friend_requests AND friends table
-    const dashboardChannel = supabase
-      .channel('dashboard_updates')
-      .on(
-        'postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'friend_requests', 
-          filter: `receiver_id=eq.${user?.id}` 
-        },
-        fetchIncomingRequests
-      )
-      .on(
-        'postgres_changes',
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'friends',
-          filter: `or(user_id_1.eq.${user?.id},user_id_2.eq.${user?.id})`
-        },
-        fetchFriendsCount
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(dashboardChannel);
-    };
-  }, [navigate, fetchProfile, fetchIncomingRequests, fetchFriendsCount, user?.id]);
-
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      toast({ title: "👋 Logged out successfully" });
+      navigate("/auth");
+    } catch (error: any) {
       toast({
-        title: "Logged out",
-        description: "You have been logged out successfully.",
+        title: "Logout failed",
+        description: error.message,
+        variant: "destructive",
       });
-      navigate("/");
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <div className="w-6 h-6 border-2 border-primary/20 rounded-full animate-spin border-t-primary"></div>
-          Loading dashboard...
-        </div>
-      </div>
-    );
-  }
+  // ✅ NO real-time - Manual refresh only
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return navigate("/auth");
+
+      setUser(session.user);
+      await handleRefresh();
+      setLoading(false);
+    };
+    checkUser();
+  }, [navigate, refreshKey]);
 
   const stats = [
     { label: "Problems Solved", value: "0", icon: CheckCircle2, color: "text-success" },
-    { label: "In Progress", value: "0", icon: Clock, color: "text-warning" },
+    { label: "Shared Sheets", value: friendsCount.toString(), icon: BookOpen, color: "text-warning" },
     { label: "Partners", value: friendsCount.toString(), icon: Users, color: "text-primary" },
   ];
 
@@ -303,6 +293,13 @@ export default function Dashboard() {
       color: "bg-success/10 text-success"
     },
     {
+      title: "Shared DSA Sheets",
+      description: "Collaborate with partners on DSA practice",
+      icon: Users,
+      href: "/shared-dsa-sheet",
+      color: "bg-warning/10 text-warning"
+    },
+    {
       title: "Messages",
       description: "Chat with your practice partners",
       icon: MessageCircle,
@@ -310,6 +307,17 @@ export default function Dashboard() {
       color: "bg-chart-2/20 text-chart-5"
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <div className="w-6 h-6 border-2 border-primary/20 rounded-full animate-spin border-t-primary"></div>
+          Loading dashboard...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -328,13 +336,21 @@ export default function Dashboard() {
               <Link to="/dashboard" className="text-foreground font-medium">Dashboard</Link>
               <Link to="/discover" className="text-muted-foreground hover:text-foreground transition-colors">Discover</Link>
               <Link to="/dsa-sheet" className="text-muted-foreground hover:text-foreground transition-colors">DSA Sheet</Link>
+              <Link to="/shared-dsa-sheet" className="text-muted-foreground hover:text-foreground transition-colors">Shared DSA</Link>
               <Link to="/messages" className="text-muted-foreground hover:text-foreground transition-colors">Messages</Link>
             </nav>
 
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="w-4 h-4" />
-              Logout
-            </Button>
+            {/* ✅ REFRESH + LOGOUT */}
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={handleRefresh}>
+                <RefreshCw className="w-4 h-4 mr-1" />
+                Refresh
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                <LogOut className="w-4 h-4" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -490,3 +506,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

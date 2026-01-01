@@ -183,6 +183,108 @@ export type Database = {
           }
         ]
       }
+      // ✅ NEW TABLES - Add these:
+      shared_dsa_sheets: {
+        Row: {
+          id: string
+          friend_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          friend_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          friend_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_dsa_sheets_friend_id_fkey",
+            columns: ["friend_id"],
+            referencedRelation: "friends",
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      
+      shared_dsa_items: {
+        Row: {
+          id: string
+          sheet_id: string
+          parent_id: string | null
+          name: string
+          type: 'folder' | 'problem'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          sheet_id: string
+          parent_id?: string | null
+          name: string
+          type: 'folder' | 'problem'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          sheet_id?: string
+          parent_id?: string | null
+          name?: string
+          type?: 'folder' | 'problem'
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_dsa_items_sheet_id_fkey",
+            columns: ["sheet_id"],
+            referencedRelation: "shared_dsa_sheets",
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_dsa_items_parent_id_fkey",
+            columns: ["parent_id"],
+            referencedRelation: "shared_dsa_items",
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      
+      shared_dsa_problems: {
+        Row: {
+          id: string
+          item_id: string
+          name: string
+          link: string | null
+          difficulty: 'easy' | 'medium' | 'hard'
+        }
+        Insert: {
+          id?: string
+          item_id: string
+          name: string
+          link?: string | null
+          difficulty: 'easy' | 'medium' | 'hard'
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          name?: string
+          link?: string | null
+          difficulty?: 'easy' | 'medium' | 'hard'
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_dsa_problems_item_id_fkey",
+            columns: ["item_id"],
+            referencedRelation: "shared_dsa_items",
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
   }
 }

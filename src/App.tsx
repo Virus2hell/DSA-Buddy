@@ -8,6 +8,8 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Discover from "./pages/Discover";
 import DSASheet from "./pages/DSASheet";
+import SharedDSASheet from "./pages/SharedDSASheet";
+import SharedDSASheetDetail from "./pages/SharedDSASheetDetail";
 import Messages from "./pages/Messages";
 import NotFound from "./pages/NotFound";
 
@@ -37,6 +39,8 @@ const App = () => {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/discover" element={<Discover />} />
               <Route path="/dsa-sheet" element={<DSASheet />} />
+              <Route path="/shared-dsa-sheet" element={<SharedDSASheet />} />
+              <Route path="/shared-dsa-sheet/:id" element={<SharedDSASheetDetail />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

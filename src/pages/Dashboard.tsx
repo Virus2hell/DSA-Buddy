@@ -327,9 +327,13 @@ const fetchSharedSheetsCount = useCallback(async () => {
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center">
-                <Code2 className="w-5 h-5 text-primary-foreground" />
+                <img
+                src="/logo.png"
+                alt="DSA Socio"
+                className="w-full h-full object-cover rounded-xl drop-shadow-lg"
+              />
               </div>
-              <span className="text-xl font-bold">DSA Partner</span>
+              <span className="text-xl font-bold">DSA Socio</span>
             </Link>
 
             <nav className="hidden md:flex items-center gap-6">

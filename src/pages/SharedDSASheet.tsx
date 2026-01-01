@@ -1,12 +1,13 @@
-// SharedDSASheets.tsx - Grid of cards
+// SharedDSASheets.tsx - Grid of cards with navigation header
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Users, RefreshCw, Folder, MessageCircle } from "lucide-react";
+import { Code2, BookOpen, Users, RefreshCw, Folder, MessageCircle, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+
 
 interface SharedSheet {
   id: string;
@@ -21,6 +22,7 @@ interface SharedSheet {
   friend_name2: string;
 }
 
+
 export default function SharedDSASheets() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -28,12 +30,15 @@ export default function SharedDSASheets() {
   const [sheets, setSheets] = useState<SharedSheet[]>([]);
   const [loading, setLoading] = useState(true);
 
+
   const loadSheets = useCallback(async () => {
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return navigate("/auth");
 
+
     setUser(session.user);
+
 
     // ✅ Step 1: Get sheets + friends (no nested profiles)
     const { data, error } = await supabase
@@ -50,6 +55,7 @@ export default function SharedDSASheets() {
       `)
       .order('created_at', { ascending: false });
 
+
     if (error) {
       console.error('❌ Sheets error:', error);
       toast({
@@ -61,12 +67,14 @@ export default function SharedDSASheets() {
       return;
     }
 
+
     if (!data || data.length === 0) {
       console.log('✅ No sheets found');
       setSheets([]);
       setLoading(false);
       return;
     }
+
 
     // ✅ Step 2: Collect all user IDs from friends
     const userIds = new Set<string>();
@@ -76,11 +84,13 @@ export default function SharedDSASheets() {
       if (friend?.user_id_2) userIds.add(friend.user_id_2);
     });
 
+
     // ✅ Step 3: Fetch all profiles at once
     const { data: profiles, error: profileError } = await supabase
       .from('profiles')
       .select('user_id, full_name')
       .in('user_id', Array.from(userIds));
+
 
     if (profileError) {
       console.error('❌ Profiles error:', profileError);
@@ -93,10 +103,12 @@ export default function SharedDSASheets() {
       return;
     }
 
+
     // ✅ Step 4: Create profile map for quick lookup
     const profileMap = new Map<string, string>(
       (profiles || []).map(p => [p.user_id, p.full_name])
     );
+
 
     // ✅ Step 5: Enrich sheets with profile names and filter
     const enrichedSheets = (data || [])
@@ -115,19 +127,28 @@ export default function SharedDSASheets() {
                sheet.friends.user_id_2 === session.user.id;
       });
 
+
     console.log('✅ Loaded sheets:', enrichedSheets.length);
     setSheets(enrichedSheets);
     setLoading(false);
   }, [navigate, toast]);
+
 
   const handleRefresh = () => {
     loadSheets();
     toast({ title: '🔄 Sheets refreshed!' });
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
+
+
   useEffect(() => {
     loadSheets();
   }, [loadSheets]);
+
 
   if (loading) {
     return (
@@ -140,26 +161,52 @@ export default function SharedDSASheets() {
     );
   }
 
+
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
+      {/* ✅ FIXED: Added navigation header with all links */}
+      <header className="border-b border-border bg-card sticky top-0 z-40">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-primary-foreground" />
+                <Code2 className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold">Shared DSA Sheets</span>
-            </div>
+              <span className="text-xl font-bold">DSA Partner</span>
+            </Link>
+
+            {/* ✅ ADDED NAVIGATION MENU */}
+            <nav className="hidden md:flex items-center gap-6">
+              <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">
+                Dashboard
+              </Link>
+              <Link to="/discover" className="text-muted-foreground hover:text-foreground transition-colors">
+                Discover
+              </Link>
+              <Link to="/dsa-sheet" className="text-muted-foreground hover:text-foreground transition-colors">
+                DSA Sheet
+              </Link>
+              <Link to="/shared-dsa-sheet" className="text-foreground font-medium">
+                Shared Sheets
+              </Link>
+              <Link to="/messages" className="text-muted-foreground hover:text-foreground transition-colors">
+                Messages
+              </Link>
+            </nav>
+
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={handleRefresh}>
                 <RefreshCw className="w-4 h-4 mr-1" />
                 Refresh
               </Button>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                <LogOut className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </div>
       </header>
+
 
       <main className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="mb-8">
@@ -168,6 +215,7 @@ export default function SharedDSASheets() {
             Collaborate with partners ({sheets.length})
           </p>
         </div>
+
 
         {sheets.length === 0 ? (
           <Card className="max-w-2xl mx-auto text-center py-20 shadow-card">

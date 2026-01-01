@@ -9,9 +9,11 @@ import { Code2, Search, Filter, UserPlus, LogOut, Users, Loader2 } from "lucide-
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+
 const skillLevels = ["All", "Beginner", "Intermediate", "Advanced"];
 const roles = ["All", "College Student", "Working Professional"];
 const languages = ["All", "Java", "C++", "Python", "JavaScript"];
+
 
 interface Profile {
   id: string;
@@ -22,6 +24,7 @@ interface Profile {
   preferred_language: string;
   created_at: string;
 }
+
 
 export default function Discover() {
   const navigate = useNavigate();
@@ -34,13 +37,16 @@ export default function Discover() {
   const [roleFilter, setRoleFilter] = useState("All");
   const [languageFilter, setLanguageFilter] = useState("All");
 
+
   // Fetch profiles excluding current user
   const fetchProfiles = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const currentUserId = session?.user?.id;
 
+
       if (!currentUserId) return;
+
 
       const { data, error } = await supabase
         .from("profiles")
@@ -48,7 +54,9 @@ export default function Discover() {
         .neq('user_id', currentUserId)
         .order("created_at", { ascending: false });
 
+
       if (error) throw error;
+
 
       setProfiles(data || []);
     } catch (error: any) {
@@ -60,6 +68,7 @@ export default function Discover() {
       });
     }
   }, [toast]);
+
 
   // Apply filters
   const applyFilters = useCallback(() => {
@@ -76,13 +85,16 @@ export default function Discover() {
     setFilteredProfiles(filtered);
   }, [profiles, searchTerm, skillFilter, roleFilter, languageFilter]);
 
+
   useEffect(() => {
     applyFilters();
   }, [applyFilters]);
 
+
   // Check auth and load profiles + real-time
   useEffect(() => {
     let channel: any;
+
 
     const checkUserAndLoad = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -91,11 +103,14 @@ export default function Discover() {
         return;
       }
 
+
       await fetchProfiles();
       setLoading(false);
     };
 
+
     checkUserAndLoad();
+
 
     // Subscribe to profile changes (fetchProfiles filters current user)
     channel = supabase
@@ -113,6 +128,7 @@ export default function Discover() {
       )
       .subscribe();
 
+
     return () => {
       if (channel) {
         supabase.removeChannel(channel);
@@ -120,12 +136,14 @@ export default function Discover() {
     };
   }, [navigate, fetchProfiles]);
 
+
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (!error) {
       navigate("/");
     }
   };
+
 
   // ✅ REAL FRIEND REQUEST SYSTEM
   // ✅ FIXED REAL FRIEND REQUEST SYSTEM
@@ -135,13 +153,16 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
     const { data: { session } } = await supabase.auth.getSession();
     const currentUserId = session?.user?.id;
 
+
     if (!currentUserId || !targetUserId) return;
+
 
     // Check if already friends
     const { count: friendCount, error: friendError } = await supabase
       .from('friends')
       .select('*', { count: 'exact', head: true })
       .or(`and(user_id_1.eq.${currentUserId},user_id_2.eq.${targetUserId}),and(user_id_1.eq.${targetUserId},user_id_2.eq.${currentUserId})`);
+
 
     if (friendError) throw friendError;
     if (friendCount && friendCount > 0) {
@@ -152,12 +173,14 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
       return;
     }
 
+
     // Check existing request
     const { data: existing } = await supabase
       .from('friend_requests')
       .select('*')
       .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${targetUserId}),and(sender_id.eq.${targetUserId},receiver_id.eq.${currentUserId})`)
       .maybeSingle();
+
 
     if (existing) {
       toast({
@@ -169,6 +192,7 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
       return;
     }
 
+
     // ✅ FIXED: Both IDs are now auth.users.id
     const { error } = await supabase.from('friend_requests').insert([{
       sender_id: currentUserId,
@@ -176,7 +200,9 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
       status: 'pending'
     }] as any);
 
+
     if (error) throw error;
+
 
     toast({
       title: "✅ Request sent!",
@@ -194,6 +220,7 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
 
 
 
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -205,9 +232,10 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
     );
   }
 
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      {/* ✅ FIXED Header - Added Shared Sheet link */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
@@ -217,6 +245,7 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
               </div>
               <span className="text-xl font-bold">DSA Partner</span>
             </Link>
+
 
             <nav className="hidden md:flex items-center gap-6">
               <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -228,10 +257,14 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
               <Link to="/dsa-sheet" className="text-muted-foreground hover:text-foreground transition-colors">
                 DSA Sheet
               </Link>
+              <Link to="/shared-dsa-sheets" className="text-muted-foreground hover:text-foreground transition-colors">
+                Shared Sheets
+              </Link>
               <Link to="/messages" className="text-muted-foreground hover:text-foreground transition-colors">
                 Messages
               </Link>
             </nav>
+
 
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="w-4 h-4" />
@@ -240,6 +273,7 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
           </div>
         </div>
       </header>
+
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
@@ -252,6 +286,7 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
             Browse and connect with developers who match your learning goals.
           </p>
         </div>
+
 
         {/* Filters */}
         <Card className="mb-8 shadow-card">
@@ -310,10 +345,12 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
           </CardContent>
         </Card>
 
+
         {/* Results */}
         <div className="mb-4 text-muted-foreground">
           Showing {filteredProfiles.length} developer{filteredProfiles.length !== 1 ? "s" : ""}
         </div>
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProfiles.map((profile) => (
@@ -331,10 +368,12 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
                   </div>
                 </div>
 
+
                 <div className="flex flex-wrap gap-2 mb-4">
                   <Badge variant="secondary">{profile.skill_level}</Badge>
                   <Badge className="gradient-primary text-primary-foreground border-0">{profile.preferred_language}</Badge>
                 </div>
+
 
                 <Button 
                   className="w-full" 
@@ -348,6 +387,7 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
             </Card>
           ))}
         </div>
+
 
         {filteredProfiles.length === 0 && (
           <Card className="shadow-card">

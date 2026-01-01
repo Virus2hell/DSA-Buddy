@@ -15,6 +15,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+
 interface Folder {
   id: string;
   name: string;
@@ -22,6 +23,7 @@ interface Folder {
   open: boolean;
   problems: Problem[];
 }
+
 
 interface Problem {
   id: string;
@@ -33,6 +35,7 @@ interface Problem {
   solved: boolean;
 }
 
+
 export default function DSASheet() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -41,11 +44,13 @@ export default function DSASheet() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
+
   // Dialog states
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [showProblemDialog, setShowProblemDialog] = useState(false);
   const [editingFolder, setEditingFolder] = useState<{ id: string, name: string } | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
 
   // Form states
   const [folderName, setFolderName] = useState("");
@@ -54,9 +59,11 @@ export default function DSASheet() {
   const [problemDifficulty, setProblemDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
   const [problemNote, setProblemNote] = useState("");
 
+
   useEffect(() => {
     loadData();
   }, []);
+
 
   const loadData = async () => {
     try {
@@ -68,6 +75,7 @@ export default function DSASheet() {
         navigate("/auth");
         return;
       }
+
 
       console.log("✅ User ID:", session.user.id);
       setUserId(session.user.id);
@@ -83,9 +91,11 @@ export default function DSASheet() {
     }
   };
 
+
   // ✅ FIXED: NO user_id in dsa_problems table - only folder_id relationship
   const loadAllDataWithRetry = async (retryCount = 0) => {
     if (!userId) return;
+
 
     try {
       setIsLoadingData(true);
@@ -98,15 +108,18 @@ export default function DSASheet() {
         .eq('user_id', userId)
         .order('created_at', { ascending: true });
 
+
       if (foldersError) throw new Error(`Folders error: ${foldersError.message}`);
       
       console.log("✅ Folders loaded:", foldersData?.length || 0);
+
 
       if (!foldersData?.length) {
         setFolders([]);
         setIsLoadingData(false);
         return;
       }
+
 
       // STEP 2: Load problems ✅ FIXED - NO user_id filter
       console.log("🔄 Loading problems...");
@@ -117,12 +130,14 @@ export default function DSASheet() {
         .select('id, name, link, folder_id, difficulty, note, solved')
         .in('folder_id', folderIds);
 
+
       if (problemsError) {
         console.error("Problems error:", problemsError);
         throw new Error(`Problems error: ${problemsError.message}`);
       }
       
       console.log("✅ Problems loaded:", problemsData?.length || 0);
+
 
       // STEP 3: Group problems by folder
       const foldersWithProblems: Folder[] = foldersData.map(folder => {
@@ -136,12 +151,15 @@ export default function DSASheet() {
         };
       });
 
+
       setFolders(foldersWithProblems);
       console.log("✅ All data loaded!");
+
 
       if (foldersWithProblems[0]) {
         setTimeout(() => toggleFolder(foldersWithProblems[0].id), 200);
       }
+
 
     } catch (error: any) {
       console.error("❌ Load error:", error);
@@ -153,18 +171,22 @@ export default function DSASheet() {
     }
   };
 
+
   const toggleFolder = (folderId: string) => {
     setFolders(prev => prev.map(folder => 
       folder.id === folderId ? { ...folder, open: !folder.open } : folder
     ));
   };
 
+
   const refreshData = async () => {
     if (userId) await loadAllDataWithRetry();
   };
 
+
   const addFolder = async () => {
     if (!folderName.trim() || !userId) return;
+
 
     try {
       const { data, error } = await supabase
@@ -173,7 +195,9 @@ export default function DSASheet() {
         .select('id, name')
         .single();
 
+
       if (error) throw error;
+
 
       toast({ title: "Folder created!", description: folderName });
       
@@ -189,13 +213,16 @@ export default function DSASheet() {
       setFolderName("");
       setShowFolderDialog(false);
 
+
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
+
   const updateFolder = async () => {
     if (!editingFolder || !folderName.trim()) return;
+
 
     try {
       const { error } = await supabase
@@ -204,7 +231,9 @@ export default function DSASheet() {
         .eq('id', editingFolder.id)
         .eq('user_id', userId);
 
+
       if (error) throw error;
+
 
       toast({ title: "Folder updated!" });
       setFolders(prev => prev.map(folder => 
@@ -214,10 +243,12 @@ export default function DSASheet() {
       setEditingFolder(null);
       setShowFolderDialog(false);
 
+
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
+
 
   const deleteFolder = async (folderId: string) => {
     const folder = folders.find(f => f.id === folderId);
@@ -226,6 +257,7 @@ export default function DSASheet() {
       return;
     }
 
+
     try {
       const { error } = await supabase
         .from('dsa_folders')
@@ -233,19 +265,24 @@ export default function DSASheet() {
         .eq('id', folderId)
         .eq('user_id', userId);
 
+
       if (error) throw error;
+
 
       toast({ title: "Folder deleted!" });
       setFolders(prev => prev.filter(f => f.id !== folderId));
+
 
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
+
   // ✅ FIXED: NO user_id in updates/deletes - only id or folder_id
   const addProblem = async () => {
     if (!problemName.trim() || !problemLink.trim() || !selectedFolderId) return;
+
 
     try {
       const { data: newProblem, error } = await supabase
@@ -261,7 +298,9 @@ export default function DSASheet() {
         .select()
         .single();
 
+
       if (error) throw error;
+
 
       toast({ title: "Problem added!", description: problemName });
       
@@ -283,18 +322,22 @@ export default function DSASheet() {
       setShowProblemDialog(false);
       setSelectedFolderId(null);
 
+
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
+
 
   const toggleSolved = async (problemId: string) => {
     try {
       const folder = folders.find(f => f.problems.some(p => p.id === problemId));
       if (!folder) return;
 
+
       const problem = folder.problems.find(p => p.id === problemId);
       if (!problem) return;
+
 
       const newSolvedState = !problem.solved;
       
@@ -304,7 +347,9 @@ export default function DSASheet() {
         .update({ solved: newSolvedState })
         .eq('id', problemId);
 
+
       if (error) throw error;
+
 
       setFolders(prev => prev.map(f => {
         if (f.id === folder.id) {
@@ -318,15 +363,18 @@ export default function DSASheet() {
         return f;
       }));
 
+
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
+
   const deleteProblem = async (problemId: string) => {
     try {
       const folder = folders.find(f => f.problems.some(p => p.id === problemId));
       if (!folder) return;
+
 
       // ✅ FIXED: Only use problem.id - NO user_id
       const { error } = await supabase
@@ -334,7 +382,9 @@ export default function DSASheet() {
         .delete()
         .eq('id', problemId);
 
+
       if (error) throw error;
+
 
       toast({ title: "Problem deleted!" });
       setFolders(prev => prev.map(f => {
@@ -348,15 +398,18 @@ export default function DSASheet() {
         return f;
       }));
 
+
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/");
   };
+
 
   if (loading) {
     return (
@@ -369,12 +422,15 @@ export default function DSASheet() {
     );
   }
 
+
   const totalProblems = folders.reduce((sum, f) => sum + f.problem_count, 0);
   const totalSolved = folders.reduce((sum, f) => sum + f.problems.filter(p => p.solved).length, 0);
   const progress = totalProblems > 0 ? Math.round((totalSolved / totalProblems) * 100) : 0;
 
+
   return (
     <div className="min-h-screen bg-background">
+      {/* ✅ FIXED: Added navigation header */}
       <header className="border-b border-border bg-card sticky top-0 z-40">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
@@ -384,6 +440,26 @@ export default function DSASheet() {
               </div>
               <span className="text-xl font-bold">DSA Partner</span>
             </Link>
+
+            {/* ✅ ADDED NAVIGATION MENU */}
+            <nav className="hidden md:flex items-center gap-6">
+              <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">
+                Dashboard
+              </Link>
+              <Link to="/discover" className="text-muted-foreground hover:text-foreground transition-colors">
+                Discover
+              </Link>
+              <Link to="/dsa-sheet" className="text-foreground font-medium">
+                DSA Sheet
+              </Link>
+              <Link to="/shared-dsa-sheet" className="text-muted-foreground hover:text-foreground transition-colors">
+                Shared Sheets
+              </Link>
+              <Link to="/messages" className="text-muted-foreground hover:text-foreground transition-colors">
+                Messages
+              </Link>
+            </nav>
+
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={refreshData} disabled={isLoadingData || !userId}>
                 {isLoadingData ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
@@ -396,6 +472,7 @@ export default function DSASheet() {
         </div>
       </header>
 
+
       <main className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
           <div>
@@ -407,6 +484,7 @@ export default function DSASheet() {
               {totalProblems} problems • {totalSolved} solved • {progress}%
             </p>
           </div>
+
 
           {/* ✅ BOTH BUTTONS SIDE BY SIDE */}
           <div className="flex gap-3">
@@ -447,6 +525,7 @@ export default function DSASheet() {
                 </div>
               </DialogContent>
             </Dialog>
+
 
             <Dialog open={showProblemDialog} onOpenChange={setShowProblemDialog}>
               <DialogTrigger asChild>
@@ -538,6 +617,7 @@ export default function DSASheet() {
           </div>
         </div>
 
+
         {/* Progress Card + Folders content same as before */}
         <Card className="mb-8 shadow-xl">
           <CardContent className="p-8">
@@ -559,6 +639,7 @@ export default function DSASheet() {
             </div>
           </CardContent>
         </Card>
+
 
         <div className="space-y-6">
           {folders.length === 0 ? (

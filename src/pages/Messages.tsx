@@ -11,12 +11,14 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+
 interface Partner {
   id: string;
   user_id: string;
   full_name: string;
   skill_level: string;
 }
+
 
 interface ChatMessage {
   id: string;
@@ -27,6 +29,7 @@ interface ChatMessage {
   message: string;
   created_at: string;
 }
+
 
 export default function Messages() {
   const navigate = useNavigate();
@@ -41,6 +44,7 @@ export default function Messages() {
   const currentUserIdRef = useRef<string>("");
   const pusherRef = useRef<any>(null);
 
+
   // 1. Init Pusher + partners
   useEffect(() => {
     let mounted = true;
@@ -53,6 +57,7 @@ export default function Messages() {
         }
         currentUserIdRef.current = session.user.id;
 
+
         const Pusher = (await import('pusher-js')).default;
         pusherRef.current = new Pusher(import.meta.env.VITE_PUSHER_KEY as string, {
           cluster: 'ap2',
@@ -60,9 +65,11 @@ export default function Messages() {
           auth: { headers: { Authorization: `Bearer ${session.access_token}` } }
         });
 
+
         pusherRef.current.connection.bind('connected', () => {
           console.log('🚀 Pusher connected!');
         });
+
 
         await fetchPartners();
         if (mounted) setLoading(false);
@@ -77,6 +84,7 @@ export default function Messages() {
     };
   }, []);
 
+
   // 2. ✅ FIXED: Load message history when partner selected
   useEffect(() => {
     if (selectedPartner?.user_id && currentUserIdRef.current) {
@@ -87,8 +95,10 @@ export default function Messages() {
     }
   }, [selectedPartner?.user_id]);
 
+
   const fetchPartners = useCallback(async () => {
     if (!currentUserIdRef.current) return;
+
 
     try {
       const { data: friendsData, error } = await supabase
@@ -96,27 +106,34 @@ export default function Messages() {
         .select('*')
         .or(`user_id_1.eq.${currentUserIdRef.current},user_id_2.eq.${currentUserIdRef.current}`);
 
+
       if (error) throw error;
+
 
       if (!friendsData?.length) {
         setPartners([]);
         return;
       }
 
+
       const otherUserIds = friendsData.map(f =>
         f.user_id_1 === currentUserIdRef.current ? f.user_id_2 : f.user_id_1
       );
+
 
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('user_id, full_name, skill_level')
         .in('user_id', otherUserIds);
 
+
       if (profileError) throw profileError;
+
 
       const partnersList: Partner[] = friendsData.map((friend: any) => {
         const otherId = friend.user_id_1 === currentUserIdRef.current ? friend.user_id_2 : friend.user_id_1;
         const profile = profiles?.find((p: any) => p.user_id === otherId);
+
 
         return {
           id: friend.id,
@@ -126,6 +143,7 @@ export default function Messages() {
         };
       });
 
+
       setPartners(partnersList);
     } catch (error: any) {
       console.error('❌ Fetch partners failed:', error);
@@ -134,18 +152,24 @@ export default function Messages() {
     }
   }, []);
 
+
   // 3. Pusher subscription
   useEffect(() => {
     if (!selectedPartner || !pusherRef.current || !currentUserIdRef.current) return;
 
+
     const channelName = `chat-${[currentUserIdRef.current.slice(0, 8), selectedPartner.user_id.slice(0, 8)].sort().join('-')}`;
+
 
     console.log('🔌 Subscribing:', channelName);
 
+
     const channel = pusherRef.current.subscribe(channelName);
+
 
     channel.bind('new-message', (data: ChatMessage) => {
       console.log('📨 LIVE Pusher:', data);
+
 
       setMessages(prev => {
         if (data.sender_id === currentUserIdRef.current) {
@@ -153,23 +177,28 @@ export default function Messages() {
           return prev;
         }
 
+
         if (prev.some(msg => msg.id === data.id)) {
           console.log('🔄 Already exists:', data.id);
           return prev;
         }
+
 
         console.log('➕ Adding new:', data.message);
         return [...prev, data];
       });
     });
 
+
     return () => {
       pusherRef.current?.unsubscribe(channelName);
     };
   }, [selectedPartner?.user_id]);
 
+
   const fetchMessages = useCallback(async (partnerId: string) => {
     if (!currentUserIdRef.current) return;
+
 
     try {
       const { data, error } = await supabase
@@ -177,6 +206,7 @@ export default function Messages() {
         .select('*')
         .eq('chat_id', selectedPartner?.id)
         .order('created_at', { ascending: true });
+
 
       if (error) throw error;
       setMessages(data || []);
@@ -186,12 +216,15 @@ export default function Messages() {
     }
   }, [selectedPartner?.id]);
 
+
   const sendMessage = async () => {
     if (!messageInput.trim() || !selectedPartner || !currentUserIdRef.current) return;
+
 
     const chatId = selectedPartner.id;
     const trimmedMessage = messageInput.trim();
     const tempId = `temp_${Date.now()}`;
+
 
     const optimisticMsg = {
       id: tempId,
@@ -202,8 +235,10 @@ export default function Messages() {
       created_at: new Date().toISOString()
     };
 
+
     setMessages(prev => [...prev, optimisticMsg]);
     setMessageInput("");
+
 
     try {
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/messages/send`, {
@@ -217,13 +252,16 @@ export default function Messages() {
         })
       });
 
+
       if (!response.ok) throw new Error('Failed to send');
+
 
       const realMsg = await response.json();
       
       setMessages(prev => prev.map(msg =>
         msg.id === tempId ? { ...realMsg, sender_name: "You" } : msg
       ));
+
 
       console.log('✅ Perfect send! Real ID:', realMsg.id);
     } catch (error) {
@@ -232,17 +270,26 @@ export default function Messages() {
     }
   };
 
+
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
+
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+
   const filteredPartners = partners.filter(p =>
     p.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
+
 
   if (loading) {
     return (
@@ -255,10 +302,11 @@ export default function Messages() {
     );
   }
 
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header - UNCHANGED */}
-      <header className="border-b border-border bg-card">
+      {/* ✅ UPDATED: Header with navigation links */}
+      <header className="border-b border-border bg-card sticky top-0 z-40">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-2">
@@ -267,10 +315,27 @@ export default function Messages() {
               </div>
               <span className="text-xl font-bold">DSA Partner</span>
             </Link>
-            <Button variant="ghost" size="sm" onClick={async () => {
-              await supabase.auth.signOut();
-              navigate("/");
-            }}>
+
+            {/* ✅ ADDED NAVIGATION MENU */}
+            <nav className="hidden md:flex items-center gap-6">
+              <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">
+                Dashboard
+              </Link>
+              <Link to="/discover" className="text-muted-foreground hover:text-foreground transition-colors">
+                Discover
+              </Link>
+              <Link to="/dsa-sheet" className="text-muted-foreground hover:text-foreground transition-colors">
+                DSA Sheet
+              </Link>
+              <Link to="/shared-dsa-sheet" className="text-muted-foreground hover:text-foreground transition-colors">
+                Shared Sheets
+              </Link>
+              <Link to="/messages" className="text-foreground font-medium">
+                Messages
+              </Link>
+            </nav>
+
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="w-4 h-4" />
               Logout
             </Button>
@@ -278,9 +343,11 @@ export default function Messages() {
         </div>
       </header>
 
+
       {/* Main Content - ORIGINAL LAYOUT + CONTAINER PADDING */}
       <div className="flex-1 container mx-auto px-4 py-6 max-w-6xl">
         <div className="h-[70vh] flex gap-4 min-h-0"> {/* Fixed height + flex */}
+
 
           {/* Partners List - UNCHANGED */}
           <Card className="w-80 shrink-0 shadow-card flex flex-col">
@@ -340,23 +407,22 @@ export default function Messages() {
             </ScrollArea>
           </Card>
 
+
           {/* ✅ CHAT - Scroll ONLY in messages */}
           <Card className="flex-1 shadow-card flex flex-col min-h-0">
             {selectedPartner ? (
               <>
+                {/* ✅ REMOVED: Online status indicator */}
                 <CardHeader className="p-4 pb-3 flex items-center gap-3 border-b border-border shrink-0">
                   <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center font-bold text-primary-foreground">
                     {selectedPartner.full_name.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="font-semibold truncate">{selectedPartner.full_name}</h3>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs text-muted-foreground">Online</span>
-                      <Badge variant="secondary" className="ml-auto">{selectedPartner.skill_level}</Badge>
-                    </div>
+                    <Badge variant="secondary" className="text-xs">{selectedPartner.skill_level}</Badge>
                   </div>
                 </CardHeader>
+
 
                 {/* ✅ SCROLL ONLY HERE - Perfect height */}
                 <ScrollArea className="flex-1 p-4 min-h-0">
@@ -388,6 +454,7 @@ export default function Messages() {
                     <div ref={messagesEndRef} />
                   </div>
                 </ScrollArea>
+
 
                 <div className="p-4 pt-0 border-t border-border shrink-0">
                   <div className="flex gap-2">
@@ -437,5 +504,4 @@ export default function Messages() {
       </div>
     </div>
   );
-
 }

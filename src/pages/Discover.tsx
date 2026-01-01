@@ -235,7 +235,6 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* ✅ FIXED Header - Added Shared Sheet link */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
@@ -257,7 +256,7 @@ const handleSendRequest = async (targetUserId: string, userName: string) => {
               <Link to="/dsa-sheet" className="text-muted-foreground hover:text-foreground transition-colors">
                 DSA Sheet
               </Link>
-              <Link to="/shared-dsa-sheets" className="text-muted-foreground hover:text-foreground transition-colors">
+              <Link to="/shared-dsa-sheet" className="text-muted-foreground hover:text-foreground transition-colors">
                 Shared Sheets
               </Link>
               <Link to="/messages" className="text-muted-foreground hover:text-foreground transition-colors">

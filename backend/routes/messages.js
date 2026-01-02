@@ -1,13 +1,24 @@
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
 
 const router = express.Router();
 
-// ✅ Supabase client
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_SERVICE_KEY
-);
+// ✅ Dynamic Supabase import (lazy, handles missing package)
+let supabase;
+async function getSupabase() {
+  if (!supabase) {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      supabase = createClient(
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_SERVICE_KEY
+      );
+    } catch (error) {
+      console.warn('⚠️ Supabase not available:', error.message);
+      supabase = null;
+    }
+  }
+  return supabase;
+}
 
 router.use((req, res, next) => {
   req.pusher = req.app.locals.pusher;
@@ -24,22 +35,38 @@ router.post('/send', async (req, res) => {
   }
 
   try {
-    // 1. ✅ SAVE TO SUPABASE (persistent!)
-    const { data: newMessage, error: dbError } = await supabase
-      .from('messages')
-      .insert({
+    // 1. Try to save to Supabase
+    const supabaseClient = await getSupabase();
+    let newMessage = null;
+
+    if (supabaseClient) {
+      const { data, error } = await supabaseClient
+        .from('messages')
+        .insert({
+          chat_id,
+          sender_id,
+          message: message.trim(),
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      newMessage = data;
+      console.log('✅ DB Saved:', newMessage.id);
+    } else {
+      // Fallback: generate ID for Pusher
+      newMessage = {
+        id: Date.now().toString(),
         chat_id,
         sender_id,
         message: message.trim(),
         created_at: new Date().toISOString()
-      })
-      .select()
-      .single();
+      };
+      console.log('✅ Pusher-only message (no DB)');
+    }
 
-    if (dbError) throw dbError;
-    console.log('✅ DB Saved:', newMessage.id);
-
-    // 2. ✅ PUSHER broadcast
+    // 2. ✅ PUSHER broadcast (always works)
     const pusherData = {
       id: newMessage.id,
       chat_id: newMessage.chat_id,

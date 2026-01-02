@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+
 
 
 // ✅ UPDATED: Added "Noob" to skill levels
@@ -16,23 +17,32 @@ const roles = ["College Student", "Working Professional", "Unemployed"];
 const languages = ["Java", "C++", "Python", "JavaScript", "C", "C#", "Go", "Kotlin", "Rust"];
 
 
+
 export default function Auth() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
 
 
+
   const [isSignup, setIsSignup] = useState(searchParams.get("mode") === "signup");
   const [loading, setLoading] = useState(false);
+
+  // ✅ NEW: Password visibility states
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
 
 
   // Form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState(""); // ✅ NEW
   const [fullName, setFullName] = useState("");
   const [skillLevel, setSkillLevel] = useState<string | null>("");
   const [role, setRole] = useState<string | null>("");
   const [language, setLanguage] = useState<string | null>("");
+
 
 
   // Fixed auth state listener with proper cleanup
@@ -46,6 +56,7 @@ export default function Auth() {
     });
 
 
+
     // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -54,10 +65,12 @@ export default function Auth() {
     });
 
 
+
     return () => {
       subscription.unsubscribe();
     };
   }, [navigate]);
+
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,12 +78,19 @@ export default function Auth() {
     setLoading(true);
 
 
+
     try {
       if (isSignup) {
+        // ✅ NEW: Validate password confirmation
+        if (password !== confirmPassword) {
+          throw new Error("Passwords do not match");
+        }
+
         // Validate form fields
         if (!fullName.trim() || !skillLevel || !role || !language) {
           throw new Error("Please fill all fields");
         }
+
 
 
         const { error, data } = await supabase.auth.signUp({
@@ -88,7 +108,9 @@ export default function Auth() {
         });
 
 
+
         if (error) throw error;
+
 
 
         if (data.user) {
@@ -102,6 +124,7 @@ export default function Auth() {
           } as any]);
 
 
+
           if (profileError) {
             console.error('Profile creation error:', profileError);
             toast({
@@ -112,10 +135,12 @@ export default function Auth() {
           }
 
 
+
           toast({
             title: "Account created successfully!",
             description: "Welcome to DSA Socio! Redirecting to dashboard...",
           });
+
 
 
           // If email confirmation is NOT required in Supabase settings, user is already signed in
@@ -138,7 +163,9 @@ export default function Auth() {
         });
 
 
+
         if (error) throw error;
+
 
 
         if (data.user) {
@@ -162,6 +189,7 @@ export default function Auth() {
   };
 
 
+
   const toggleMode = () => {
     setIsSignup(!isSignup);
     // Reset form when switching modes
@@ -173,7 +201,11 @@ export default function Auth() {
     }
     setEmail("");
     setPassword("");
+    setConfirmPassword(""); // ✅ NEW: Reset confirm password
+    setShowPassword(false); // ✅ NEW: Reset visibility
+    setShowConfirmPassword(false); // ✅ NEW: Reset visibility
   };
+
 
 
   return (
@@ -191,8 +223,10 @@ export default function Auth() {
         {/* Dark Overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-teal-600/70 via-teal-700/80 to-teal-800/90" />
 
+
         {/* Radial Gradient Overlay */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent)]" />
+
 
 
 
@@ -206,10 +240,12 @@ export default function Auth() {
         </div>
 
 
+
         <div className="relative z-10 text-primary-foreground/60 text-sm">
           © {new Date().getFullYear()} DSA Socio
         </div>
       </div>
+
 
 
       {/* Right side - Form */}
@@ -222,6 +258,7 @@ export default function Auth() {
             <ArrowLeft className="w-4 h-4" />
             Back to home
           </Link>
+
 
 
           {/* ✅ MOBILE LOGO - Already correct */}
@@ -237,6 +274,7 @@ export default function Auth() {
           </div>
 
 
+
           <h2 className="text-2xl font-bold mb-2">
             {isSignup ? "Create your account" : "Welcome back"}
           </h2>
@@ -245,6 +283,7 @@ export default function Auth() {
               ? "Start your collaborative DSA journey today"
               : "Log in to continue your practice"}
           </p>
+
 
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -262,6 +301,7 @@ export default function Auth() {
             )}
 
 
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -275,18 +315,70 @@ export default function Auth() {
             </div>
 
 
+
+            {/* ✅ UPDATED: Password field with eye icon */}
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
             </div>
+
+
+
+            {/* ✅ NEW: Confirm Password field with eye icon */}
+            {isSignup && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+                {password && confirmPassword && password !== confirmPassword && (
+                  <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
+                )}
+              </div>
+            )}
+
 
 
             {isSignup && (
@@ -308,6 +400,7 @@ export default function Auth() {
                 </div>
 
 
+
                 <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
                   <Select value={role || undefined} onValueChange={setRole} required>
@@ -323,6 +416,7 @@ export default function Auth() {
                     </SelectContent>
                   </Select>
                 </div>
+
 
 
                 <div className="space-y-2">
@@ -344,11 +438,19 @@ export default function Auth() {
             )}
 
 
-            <Button type="submit" className="w-full" variant="gradient" size="lg" disabled={loading}>
+
+            <Button 
+              type="submit" 
+              className="w-full" 
+              variant="gradient" 
+              size="lg" 
+              disabled={loading || (isSignup && password !== confirmPassword)}
+            >
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {isSignup ? "Create Account" : "Log In"}
             </Button>
           </form>
+
 
 
           <p className="text-center text-muted-foreground mt-6">

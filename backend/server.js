@@ -13,19 +13,36 @@ config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
 
-// ✅ Production-ready CORS
-const allowedOrigins = [
-  'http://localhost:8081', 
-  'http://localhost:5173',
-  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
-  ...(process.env.FRONTEND_URLS ? process.env.FRONTEND_URLS.split(',') : [])
-];
+// ✅ FIXED CORS - handles multiple formats
+const getAllowedOrigins = () => {
+  const origins = [
+    'http://localhost:8081', 
+    'http://localhost:5173'
+  ];
+  
+  // FRONTEND_URL (single)
+  if (process.env.FRONTEND_URL) {
+    origins.push(process.env.FRONTEND_URL);
+  }
+  
+  // FRONTEND_URLS (comma-separated)
+  if (process.env.FRONTEND_URLS) {
+    const urlList = process.env.FRONTEND_URLS.split(',').map(url => url.trim());
+    origins.push(...urlList);
+  }
+  
+  console.log('🔒 Allowed CORS origins:', origins);
+  return origins;
+};
 
 app.use(cors({ 
-  origin: allowedOrigins,
-  credentials: true 
+  origin: getAllowedOrigins(),
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json({ limit: '10mb' })); // reasonable limit
+
+app.use(express.json({ limit: '10mb' }));
 
 // ✅ PUSHER initialization
 const pusher = new Pusher({
@@ -66,6 +83,16 @@ try {
 app.use('/api/messages', messagesRouter.default);
 app.use('/api/pusher', pusherRouter.default);
 
+// ✅ CORS Debug endpoint
+app.get('/debug-cors', (req, res) => {
+  res.json({
+    origin: req.headers.origin,
+    allowed: getAllowedOrigins().includes(req.headers.origin),
+    allOrigins: getAllowedOrigins(),
+    frontendUrls: process.env.FRONTEND_URLS
+  });
+});
+
 // ✅ Production health check
 app.get('/health', async (req, res) => {
   try {
@@ -77,7 +104,8 @@ app.get('/health', async (req, res) => {
       status: 'OK', 
       pusher: '✅ WORKING',
       routes: '✅',
-      env: process.env.NODE_ENV || 'development'
+      env: process.env.NODE_ENV || 'development',
+      corsOrigins: getAllowedOrigins()
     });
   } catch (error) {
     console.error('Health check failed:', error);
@@ -88,8 +116,8 @@ app.get('/health', async (req, res) => {
 // ✅ API base path
 app.get('/api', (req, res) => {
   res.json({
-    status: 'DSA Buddy Backend API',
-    endpoints: ['/health', '/api/messages', '/api/pusher'],
+    status: 'DSA Socio Backend API',
+    endpoints: ['/health', '/debug-cors', '/api/messages', '/api/pusher'],
     pusher: process.env.PUSHER_CLUSTER || 'ap2'
   });
 });
@@ -97,9 +125,10 @@ app.get('/api', (req, res) => {
 // ✅ CRITICAL: Render PORT priority
 const PORT = process.env.PORT || process.env.BACKEND_PORT || 5000;
 
-app.listen(PORT, '0.0.0.0', () => {  // ✅ Bind to all interfaces
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Backend running on port ${PORT}`);
   console.log(`🧪 Health: http://localhost:${PORT}/health`);
+  console.log(`🔍 CORS Debug: http://localhost:${PORT}/debug-cors`);
   console.log(`📋 API: http://localhost:${PORT}/api`);
 });
 

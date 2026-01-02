@@ -10,9 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 
-const skillLevels = ["All", "Beginner", "Intermediate", "Advanced"];
-const roles = ["All", "College Student", "Working Professional"];
-const languages = ["All", "Java", "C++", "Python", "JavaScript"];
+const skillLevels = ["All","Noob", "Beginner", "Intermediate", "Advanced"];
+const roles = ["All", "College Student", "Working Professional", "Unemployed"];
+const languages = ["All","Java", "C++", "Python", "JavaScript", "C", "C#", "Go", "Kotlin", "Rust"];
 
 
 interface Profile {

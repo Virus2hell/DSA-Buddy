@@ -8,17 +8,23 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-const skillLevels = ["Beginner", "Intermediate", "Advanced"];
-const roles = ["College Student", "Working Professional"];
-const languages = ["Java", "C++", "Python", "JavaScript"];
+
+// ✅ UPDATED: Added "Noob" to skill levels
+const skillLevels = ["Noob", "Beginner", "Intermediate", "Advanced"];
+// ✅ UPDATED: Added "Unemployed" to roles
+const roles = ["College Student", "Working Professional", "Unemployed"];
+const languages = ["Java", "C++", "Python", "JavaScript", "C", "C#", "Go", "Kotlin", "Rust"];
+
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+
   const [isSignup, setIsSignup] = useState(searchParams.get("mode") === "signup");
   const [loading, setLoading] = useState(false);
+
 
   // Form state
   const [email, setEmail] = useState("");
@@ -27,6 +33,7 @@ export default function Auth() {
   const [skillLevel, setSkillLevel] = useState<string | null>("");
   const [role, setRole] = useState<string | null>("");
   const [language, setLanguage] = useState<string | null>("");
+
 
   // Fixed auth state listener with proper cleanup
   useEffect(() => {
@@ -38,6 +45,7 @@ export default function Auth() {
       }
     });
 
+
     // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -45,14 +53,17 @@ export default function Auth() {
       }
     });
 
+
     return () => {
       subscription.unsubscribe();
     };
   }, [navigate]);
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
 
     try {
       if (isSignup) {
@@ -60,6 +71,7 @@ export default function Auth() {
         if (!fullName.trim() || !skillLevel || !role || !language) {
           throw new Error("Please fill all fields");
         }
+
 
         const { error, data } = await supabase.auth.signUp({
           email: email.trim(),
@@ -75,7 +87,9 @@ export default function Auth() {
           },
         });
 
+
         if (error) throw error;
+
 
         if (data.user) {
           // Create profile record in profiles table
@@ -87,6 +101,7 @@ export default function Auth() {
             preferred_language: language!,
           } as any]);
 
+
           if (profileError) {
             console.error('Profile creation error:', profileError);
             toast({
@@ -96,10 +111,12 @@ export default function Auth() {
             });
           }
 
+
           toast({
             title: "Account created successfully!",
             description: "Welcome to DSA Socio! Redirecting to dashboard...",
           });
+
 
           // If email confirmation is NOT required in Supabase settings, user is already signed in
           // Check if session exists after signup
@@ -120,7 +137,9 @@ export default function Auth() {
           password,
         });
 
+
         if (error) throw error;
+
 
         if (data.user) {
           toast({
@@ -142,6 +161,7 @@ export default function Auth() {
     }
   };
 
+
   const toggleMode = () => {
     setIsSignup(!isSignup);
     // Reset form when switching modes
@@ -155,25 +175,26 @@ export default function Auth() {
     setPassword("");
   };
 
+
   return (
     <div className="min-h-screen flex">
-      {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-primary p-12 flex-col justify-between relative overflow-hidden">
+      {/* ✅ UPDATED: Left side - Branding with Code/Algorithm Background Image */}
+      <div
+        className="hidden lg:flex lg:w-1/2 p-12 flex-col justify-between relative overflow-hidden"
+        style={{
+          backgroundImage: 'url("https://plus.unsplash.com/premium_photo-1764687831349-7873810c57a9?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8Y29ubmVjdGVkJTIwZG90cyUyMGFuZCUyMGxpbmV8ZW58MHx8MHx8fDA%3D")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed'
+        }}
+      >
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-600/70 via-teal-700/80 to-teal-800/90" />
+
+        {/* Radial Gradient Overlay */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent)]" />
 
-        <div className="relative z-10">
-          {/* ✅ DESKTOP LOGO - Updated with image */}
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center">
-              <img
-                src="/logo.png"
-                alt="DSA Socio"
-                className="w-full h-full object-cover rounded-lg drop-shadow-lg"
-              />
-            </div>
-            <span className="text-2xl font-bold text-primary-foreground">DSA Socio</span>
-          </Link>
-        </div>
+
 
         <div className="relative z-10">
           <h1 className="text-4xl font-bold text-primary-foreground mb-4">
@@ -184,10 +205,12 @@ export default function Auth() {
           </p>
         </div>
 
+
         <div className="relative z-10 text-primary-foreground/60 text-sm">
           © {new Date().getFullYear()} DSA Socio
         </div>
       </div>
+
 
       {/* Right side - Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
@@ -199,6 +222,7 @@ export default function Auth() {
             <ArrowLeft className="w-4 h-4" />
             Back to home
           </Link>
+
 
           {/* ✅ MOBILE LOGO - Already correct */}
           <div className="lg:hidden flex items-center gap-2 mb-8">
@@ -212,6 +236,7 @@ export default function Auth() {
             <span className="text-xl font-bold">DSA Socio</span>
           </div>
 
+
           <h2 className="text-2xl font-bold mb-2">
             {isSignup ? "Create your account" : "Welcome back"}
           </h2>
@@ -220,6 +245,7 @@ export default function Auth() {
               ? "Start your collaborative DSA journey today"
               : "Log in to continue your practice"}
           </p>
+
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignup && (
@@ -235,6 +261,7 @@ export default function Auth() {
               </div>
             )}
 
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -246,6 +273,7 @@ export default function Auth() {
                 required
               />
             </div>
+
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
@@ -259,6 +287,7 @@ export default function Auth() {
                 minLength={6}
               />
             </div>
+
 
             {isSignup && (
               <>
@@ -278,6 +307,7 @@ export default function Auth() {
                   </Select>
                 </div>
 
+
                 <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
                   <Select value={role || undefined} onValueChange={setRole} required>
@@ -293,6 +323,7 @@ export default function Auth() {
                     </SelectContent>
                   </Select>
                 </div>
+
 
                 <div className="space-y-2">
                   <Label htmlFor="language">Preferred Language</Label>
@@ -312,11 +343,13 @@ export default function Auth() {
               </>
             )}
 
+
             <Button type="submit" className="w-full" variant="gradient" size="lg" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {isSignup ? "Create Account" : "Log In"}
             </Button>
           </form>
+
 
           <p className="text-center text-muted-foreground mt-6">
             {isSignup ? "Already have an account?" : "Don't have an account?"}{" "}

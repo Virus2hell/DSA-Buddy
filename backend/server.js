@@ -13,7 +13,7 @@ config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
 
-// ✅ FIXED CORS - handles multiple formats
+// ✅ FIXED CORS - Exact matching + trailing slash handling
 const getAllowedOrigins = () => {
   const origins = [
     'http://localhost:8081', 
@@ -22,12 +22,15 @@ const getAllowedOrigins = () => {
   
   // FRONTEND_URL (single)
   if (process.env.FRONTEND_URL) {
-    origins.push(process.env.FRONTEND_URL);
+    origins.push(process.env.FRONTEND_URL.trim().replace(/\/+$/, '')); // Remove trailing /
   }
   
   // FRONTEND_URLS (comma-separated)
   if (process.env.FRONTEND_URLS) {
-    const urlList = process.env.FRONTEND_URLS.split(',').map(url => url.trim());
+    const urlList = process.env.FRONTEND_URLS
+      .split(',')
+      .map(url => url.trim().replace(/\/+$/, '')) // Remove trailing /
+      .filter(url => url.length > 0);
     origins.push(...urlList);
   }
   
@@ -35,12 +38,24 @@ const getAllowedOrigins = () => {
   return origins;
 };
 
+// ✅ Apply CORS middleware
 app.use(cors({ 
-  origin: getAllowedOrigins(),
+  origin: (origin, callback) => {
+    const allowed = getAllowedOrigins();
+    if (!origin || allowed.some(allowedOrigin => 
+      origin.replace(/\/+$/, '') === allowedOrigin.replace(/\/+$/, '')
+    )) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'OPTIONS'],
+  methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+app.options('*', cors()); // Handle preflight for all routes
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -83,15 +98,23 @@ try {
 app.use('/api/messages', messagesRouter.default);
 app.use('/api/pusher', pusherRouter.default);
 
-// ✅ CORS Debug endpoint
-app.get('/debug-cors', (req, res) => {
+// ✅ No TS hassle
+app.get('/debug-cors', function(req, res) {
+  const origin = req.headers.origin || '';
+  const allowedOrigins = getAllowedOrigins();
+  const isAllowed = !origin || allowedOrigins.some(allowedOrigin => 
+    origin.replace(/\/+$/, '') === allowedOrigin.replace(/\/+$/, '')
+  );
+  
   res.json({
-    origin: req.headers.origin,
-    allowed: getAllowedOrigins().includes(req.headers.origin),
-    allOrigins: getAllowedOrigins(),
-    frontendUrls: process.env.FRONTEND_URLS
+    origin,
+    allowed: isAllowed,
+    allOrigins: allowedOrigins,
+    frontendUrls: process.env.FRONTEND_URLS,
+    envLoaded: !!process.env.FRONTEND_URLS
   });
 });
+
 
 // ✅ Production health check
 app.get('/health', async (req, res) => {
@@ -118,7 +141,8 @@ app.get('/api', (req, res) => {
   res.json({
     status: 'DSA Socio Backend API',
     endpoints: ['/health', '/debug-cors', '/api/messages', '/api/pusher'],
-    pusher: process.env.PUSHER_CLUSTER || 'ap2'
+    pusher: process.env.PUSHER_CLUSTER || 'ap2',
+    corsOrigins: getAllowedOrigins()
   });
 });
 
@@ -130,6 +154,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🧪 Health: http://localhost:${PORT}/health`);
   console.log(`🔍 CORS Debug: http://localhost:${PORT}/debug-cors`);
   console.log(`📋 API: http://localhost:${PORT}/api`);
+  console.log(`🔒 Origins:`, getAllowedOrigins());
 });
 
 export default app;

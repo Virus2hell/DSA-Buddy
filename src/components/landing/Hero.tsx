@@ -1,8 +1,14 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Users, BookOpen, MessageCircle } from "lucide-react";
+import { MouseEvent } from "react";
 
 export function Hero() {
+  function scrollToSection(e: MouseEvent<HTMLAnchorElement>, sectionId: string): void {
+    e.preventDefault();
+    const element = document.getElementById(sectionId);
+    element?.scrollIntoView({ behavior: "smooth" });
+  }
   return (
     <section className="pt-32 pb-20 px-4">
       <div className="container mx-auto">
@@ -26,7 +32,12 @@ export function Hero() {
               </Link>
             </Button>
             <Button variant="outline" size="xl" asChild>
-              <Link to="#how-it-works">See How it Works</Link>
+              <a 
+              href="#how-it-works" 
+              onClick={(e) => scrollToSection(e, 'how-it-works')}
+            >
+              See How it Works
+            </a>
             </Button>
           </div>
 

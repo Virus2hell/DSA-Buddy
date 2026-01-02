@@ -1,4 +1,4 @@
-import { UserPlus, Search, Handshake, Rocket } from "lucide-react";
+import { UserPlus, Search, Handshake, BookOpenText ,Rocket } from "lucide-react";
 
 const steps = [
   {
@@ -16,12 +16,18 @@ const steps = [
   {
     icon: Handshake,
     step: "03",
-    title: "Connect & Collaborate",
-    description: "Send partner requests, get accepted, and start working together on shared DSA problem sheets.",
+    title: "Connect & Chat",
+    description: "Send partner requests, get accepted, and start chatting in real-time with your connected partners.",
+  },
+  {
+    icon: BookOpenText,
+    step: "04",
+    title: "Collaborate",
+    description: "Get a shared DSA sheet with your partners. Both of you can add, solve, and track problems together.",
   },
   {
     icon: Rocket,
-    step: "04",
+    step: "05",
     title: "Level Up Together",
     description: "Track progress, chat in real-time, and motivate each other to consistently improve your DSA skills.",
   },

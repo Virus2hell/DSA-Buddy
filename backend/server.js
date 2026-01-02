@@ -8,28 +8,26 @@ import Pusher from 'pusher';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Load ROOT .env (Render injects env vars directly, but this handles local)
+// ✅ Load ROOT .env
 config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
 
-// ✅ FIXED CORS - Exact matching + trailing slash handling
+// ✅ FIXED CORS - Express 5 compatible
 const getAllowedOrigins = () => {
   const origins = [
     'http://localhost:8081', 
     'http://localhost:5173'
   ];
   
-  // FRONTEND_URL (single)
   if (process.env.FRONTEND_URL) {
-    origins.push(process.env.FRONTEND_URL.trim().replace(/\/+$/, '')); // Remove trailing /
+    origins.push(process.env.FRONTEND_URL.trim().replace(/\/+$/, ''));
   }
   
-  // FRONTEND_URLS (comma-separated)
   if (process.env.FRONTEND_URLS) {
     const urlList = process.env.FRONTEND_URLS
       .split(',')
-      .map(url => url.trim().replace(/\/+$/, '')) // Remove trailing /
+      .map(url => url.trim().replace(/\/+$/, ''))
       .filter(url => url.length > 0);
     origins.push(...urlList);
   }
@@ -38,28 +36,16 @@ const getAllowedOrigins = () => {
   return origins;
 };
 
-// ✅ Apply CORS middleware
 app.use(cors({ 
-  origin: (origin, callback) => {
-    const allowed = getAllowedOrigins();
-    if (!origin || allowed.some(allowedOrigin => 
-      origin.replace(/\/+$/, '') === allowedOrigin.replace(/\/+$/, '')
-    )) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: getAllowedOrigins(),
   credentials: true,
   methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.options('*', cors()); // Handle preflight for all routes
-
 app.use(express.json({ limit: '10mb' }));
 
-// ✅ PUSHER initialization
+// ✅ PUSHER
 const pusher = new Pusher({
   appId: process.env.PUSHER_APP_ID,
   key: process.env.PUSHER_KEY,
@@ -77,13 +63,12 @@ console.log('🔍 PUSHER CHECK:', {
   cluster: process.env.PUSHER_CLUSTER || '❌'
 });
 
-// ✅ Validation
 if (!process.env.PUSHER_KEY || !process.env.PUSHER_SECRET) {
   console.error('🚫 Missing env: PUSHER_KEY or PUSHER_SECRET');
   process.exit(1);
 }
 
-// ✅ Dynamic route imports
+// ✅ Routes
 let messagesRouter, pusherRouter;
 try {
   messagesRouter = await import('./routes/messages.js');
@@ -94,12 +79,11 @@ try {
   process.exit(1);
 }
 
-// ✅ Mount routes
 app.use('/api/messages', messagesRouter.default);
 app.use('/api/pusher', pusherRouter.default);
 
-// ✅ No TS hassle
-app.get('/debug-cors', function(req, res) {
+// ✅ Debug endpoints
+app.get('/debug-cors', function(req, res) {  // No TS
   const origin = req.headers.origin || '';
   const allowedOrigins = getAllowedOrigins();
   const isAllowed = !origin || allowedOrigins.some(allowedOrigin => 
@@ -110,13 +94,10 @@ app.get('/debug-cors', function(req, res) {
     origin,
     allowed: isAllowed,
     allOrigins: allowedOrigins,
-    frontendUrls: process.env.FRONTEND_URLS,
-    envLoaded: !!process.env.FRONTEND_URLS
+    frontendUrls: process.env.FRONTEND_URLS
   });
 });
 
-
-// ✅ Production health check
 app.get('/health', async (req, res) => {
   try {
     await pusher.trigger('health-test', 'test', { 
@@ -126,34 +107,24 @@ app.get('/health', async (req, res) => {
     res.json({ 
       status: 'OK', 
       pusher: '✅ WORKING',
-      routes: '✅',
-      env: process.env.NODE_ENV || 'development',
       corsOrigins: getAllowedOrigins()
     });
   } catch (error) {
-    console.error('Health check failed:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// ✅ API base path
 app.get('/api', (req, res) => {
   res.json({
     status: 'DSA Socio Backend API',
-    endpoints: ['/health', '/debug-cors', '/api/messages', '/api/pusher'],
-    pusher: process.env.PUSHER_CLUSTER || 'ap2',
-    corsOrigins: getAllowedOrigins()
+    endpoints: ['/health', '/debug-cors', '/api/messages', '/api/pusher']
   });
 });
 
-// ✅ CRITICAL: Render PORT priority
 const PORT = process.env.PORT || process.env.BACKEND_PORT || 5000;
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Backend running on port ${PORT}`);
-  console.log(`🧪 Health: http://localhost:${PORT}/health`);
-  console.log(`🔍 CORS Debug: http://localhost:${PORT}/debug-cors`);
-  console.log(`📋 API: http://localhost:${PORT}/api`);
+  console.log(`🚀 Backend on port ${PORT}`);
   console.log(`🔒 Origins:`, getAllowedOrigins());
 });
 

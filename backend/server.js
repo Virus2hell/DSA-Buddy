@@ -8,14 +8,20 @@ import Pusher from 'pusher';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Load ROOT .env
+// ✅ Load ROOT .env (works on Render too)
 config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
 
-// ✅ Middleware FIRST
+// ✅ FIXED CORS for production - dynamic origins
+const allowedOrigins = [
+  'http://localhost:8081', 
+  'http://localhost:5173',
+  process.env.FRONTEND_URL || 'https://your-vercel-app.vercel.app' // set in Render env
+];
+
 app.use(cors({ 
-  origin: ['http://localhost:8081', 'http://localhost:5173'], 
+  origin: allowedOrigins,
   credentials: true 
 }));
 app.use(express.json());
@@ -40,7 +46,7 @@ console.log('🔍 PUSHER CHECK:', {
 
 // ✅ ONLY PUSHER validation (NO SUPABASE)
 if (!process.env.PUSHER_KEY || !process.env.PUSHER_SECRET) {
-  console.error('🚫 Missing .env: PUSHER_KEY or PUSHER_SECRET');
+  console.error('🚫 Missing env: PUSHER_KEY or PUSHER_SECRET');
   process.exit(1);
 }
 
@@ -73,8 +79,11 @@ app.get('/health', async (req, res) => {
   }
 });
 
-const PORT = process.env.BACKEND_PORT || 5000;
+// ✅ CRITICAL: Use Render's PORT (overrides BACKEND_PORT)
+const PORT = process.env.PORT || process.env.BACKEND_PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Backend: http://localhost:${PORT}`);
-  console.log('🧪 Health: http://localhost:5000/health');
+  console.log(`🚀 Backend running on port ${PORT}`);
+  console.log('🧪 Health: http://localhost:${PORT}/health');
 });
+
+export default app;

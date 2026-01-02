@@ -1,5 +1,5 @@
 // src/lib/pusher.ts
-import Pusher from "pusher-js";
+import Pusher from 'pusher-js';
 
 export const pusherClient = new Pusher(
   import.meta.env.VITE_PUSHER_KEY as string,

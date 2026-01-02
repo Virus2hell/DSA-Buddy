@@ -1,9 +1,9 @@
 // src/lib/api.ts
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
-export const apiFetch = async (path: string, options?: RequestInit) => {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+const apiFetch = async (endpoint: string, options?: RequestInit) => {
+  const url = `${API_BASE_URL}${endpoint}`;
+  const res = await fetch(url, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -14,6 +14,12 @@ export const apiFetch = async (path: string, options?: RequestInit) => {
   if (!res.ok) {
     throw new Error(`API error: ${res.status}`);
   }
-
   return res.json();
 };
+
+export const sendMessage = (data: any) => apiFetch('/api/messages/send', {
+  method: 'POST',
+  body: JSON.stringify(data)
+});
+
+export default apiFetch;

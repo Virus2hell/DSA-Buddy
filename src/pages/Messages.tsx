@@ -88,7 +88,6 @@ export default function Messages() {
   // 2. ✅ FIXED: Load message history when partner selected
   useEffect(() => {
     if (selectedPartner?.user_id && currentUserIdRef.current) {
-      console.log('📥 Loading history for:', selectedPartner.full_name);
       fetchMessages(selectedPartner.user_id);
     } else {
       setMessages([]);
@@ -161,30 +160,30 @@ export default function Messages() {
     const channelName = `chat-${[currentUserIdRef.current.slice(0, 8), selectedPartner.user_id.slice(0, 8)].sort().join('-')}`;
 
 
-    console.log('🔌 Subscribing:', channelName);
+  
 
 
     const channel = pusherRef.current.subscribe(channelName);
 
 
     channel.bind('new-message', (data: ChatMessage) => {
-      console.log('📨 LIVE Pusher:', data);
+      
 
 
       setMessages(prev => {
         if (data.sender_id === currentUserIdRef.current) {
-          console.log('⏭️ Skipping own message:', data.id);
+
           return prev;
         }
 
 
         if (prev.some(msg => msg.id === data.id)) {
-          console.log('🔄 Already exists:', data.id);
+          
           return prev;
         }
 
 
-        console.log('➕ Adding new:', data.message);
+        
         return [...prev, data];
       });
     });
@@ -210,7 +209,6 @@ export default function Messages() {
 
       if (error) throw error;
       setMessages(data || []);
-      console.log('✅ Loaded', data?.length || 0, 'messages from DB');
     } catch (error: any) {
       console.error('❌ Fetch messages failed:', error);
     }
@@ -263,7 +261,6 @@ export default function Messages() {
       ));
 
 
-      console.log('✅ Perfect send! Real ID:', realMsg.id);
     } catch (error) {
       console.error('❌ Failed:', error);
       setMessages(prev => prev.filter(msg => msg.id !== tempId));

@@ -126,8 +126,6 @@ export default function SharedDSASheetDetail() {
                 .select('*')
                 .eq('sheet_id', sheetId);
 
-            console.log('📦 Flat items from DB:', flatItems);
-
             if (itemsError) {
                 console.error('❌ Items error:', itemsError);
                 toast({ title: "Error", description: itemsError.message, variant: "destructive" });
@@ -145,8 +143,6 @@ export default function SharedDSASheetDetail() {
                     .select('*')
                     .in('item_id', itemIds);
 
-                console.log('🔗 All problems from DB:', problems);
-
                 if (problemsError) {
                     console.error('❌ Problems error:', problemsError);
                 } else {
@@ -158,9 +154,7 @@ export default function SharedDSASheetDetail() {
             const problemMap = new Map<string, any>();
             allProblems.forEach(problem => {
                 problemMap.set(problem.item_id, problem);
-            });
-
-            console.log('🗺️ Problem map:', problemMap);
+            }); 
 
             // ✅ STEP 4: Build items with problem data
             const rootItems: SharedItem[] = [];
@@ -168,8 +162,6 @@ export default function SharedDSASheetDetail() {
 
             (flatItems || []).forEach((raw: any) => {
                 const problemData = problemMap.get(raw.id);
-
-                console.log(`📝 Item "${raw.name}":`, problemData);
 
                 const item: SharedItem = {
                     id: raw.id,
@@ -204,7 +196,6 @@ export default function SharedDSASheetDetail() {
                 }
             });
 
-            console.log('✅ Final loaded items:', rootItems);
             setItems(rootItems);
 
             setLoading(false);
@@ -286,7 +277,6 @@ export default function SharedDSASheetDetail() {
                 toast({ title: "✅ Folder created!" });
             } else {
                 // ✅ Create problem
-                console.log('📝 Creating problem:', newItemData);
 
                 const { data: itemData, error: itemError } = await supabase
                     .from('shared_dsa_items')
@@ -304,8 +294,6 @@ export default function SharedDSASheetDetail() {
                     toast({ title: "Error creating problem", description: itemError.message, variant: "destructive" });
                     return;
                 }
-
-                console.log('✅ Item created:', itemData);
 
                 // Create problem details
                 if (itemData?.id) {
@@ -346,7 +334,6 @@ export default function SharedDSASheetDetail() {
 
     const deleteItem = async (itemId: string) => {
         try {
-            console.log('🗑️ Deleting item:', itemId);
 
             const { error } = await supabase
                 .from('shared_dsa_items')
@@ -711,7 +698,7 @@ interface ProblemItemProps {
 }
 
 function ProblemItem({ item, onDelete }: ProblemItemProps) {
-    console.log('🔍 Rendering ProblemItem:', item.name, 'Link:', item.problem?.link);
+
 
     return (
         <div className="flex items-center gap-3 p-4 rounded-xl bg-card/50 border border-border hover:border-primary/30 transition-colors group">

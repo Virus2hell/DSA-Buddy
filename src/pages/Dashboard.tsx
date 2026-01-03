@@ -53,11 +53,9 @@ export default function Dashboard() {
   }, []);
 
   const fetchIncomingRequests = useCallback(async () => {
-  console.log('🔍 Fetching requests...');
   const { data: { session } } = await supabase.auth.getSession();
   const userId = session?.user?.id;
 
-  console.log('🔍 My user ID:', userId);
 
   if (!userId) return;
 
@@ -74,16 +72,12 @@ export default function Dashboard() {
     return;
   }
 
-  console.log('🔍 Found requests:', requests);
-
   // STEP 2: Get sender profiles
   const senderIds = requests.map(r => r.sender_id);
   const { data: senderProfiles } = await supabase
     .from('profiles')
     .select('id, user_id, full_name, skill_level')
     .in('user_id', senderIds);
-
-  console.log('🔍 Sender profiles:', senderProfiles);
 
   // STEP 3: Combine data
   const requestsWithProfiles = requests.map(req => {
@@ -96,7 +90,6 @@ export default function Dashboard() {
   });
 
   setIncomingRequests(requestsWithProfiles);
-  console.log('✅ FINAL requests:', requestsWithProfiles);
 }, []);
 
 // ✅ BULLETPROOF COUNTS - Handle multiple friends correctly
@@ -110,7 +103,6 @@ const fetchSharedSheetsCount = useCallback(async () => {
     }
 
     const userId = session.user.id;
-    console.log('🔍 Counting for:', userId);
 
     // Count FRIENDS first
     const { count: friendsCount } = await supabase
@@ -118,7 +110,7 @@ const fetchSharedSheetsCount = useCallback(async () => {
       .select('*', { count: 'exact', head: true })
       .or(`user_id_1.eq.${userId},user_id_2.eq.${userId}`);
 
-    console.log('✅ Friends count:', friendsCount);
+    ('✅ Friends count:', friendsCount);
 
     // Count SHEETS - Get ALL friend_ids for this user, then count sheets
     const { data: userFriends } = await supabase
@@ -137,8 +129,6 @@ const fetchSharedSheetsCount = useCallback(async () => {
       
       sheetsCount = count || 0;
     }
-
-    console.log('✅ Friends:', friendsCount, 'Sheets:', sheetsCount);
     
     // Separate state updates (if you have setSheetsCount)
     setFriendsCount(friendsCount || 0);
@@ -190,7 +180,6 @@ const fetchSharedSheetsCount = useCallback(async () => {
           console.error('🚨 Friend insert returned no data', newFriend);
           throw new Error('Failed to create friend');
         }
-        console.log('✅ Friend created:', newFriend.id);
 
         const chatId = newFriend.id;
 

@@ -31,8 +31,6 @@ const getAllowedOrigins = () => {
       .filter(url => url.length > 0);
     origins.push(...urlList);
   }
-  
-  console.log('🔒 Allowed CORS origins:', origins);
   return origins;
 };
 
@@ -56,13 +54,6 @@ const pusher = new Pusher({
 
 app.locals.pusher = pusher;
 
-console.log('🔍 PUSHER CHECK:', {
-  appId: process.env.PUSHER_APP_ID ? '✅' : '❌',
-  key: process.env.PUSHER_KEY ? '✅' : '❌',
-  secret: process.env.PUSHER_SECRET ? '✅' : '❌',
-  cluster: process.env.PUSHER_CLUSTER || '❌'
-});
-
 if (!process.env.PUSHER_KEY || !process.env.PUSHER_SECRET) {
   console.error('🚫 Missing env: PUSHER_KEY or PUSHER_SECRET');
   process.exit(1);
@@ -73,7 +64,6 @@ let messagesRouter, pusherRouter;
 try {
   messagesRouter = await import('./routes/messages.js');
   pusherRouter = await import('./routes/pusher.js');
-  console.log('✅ Routes loaded');
 } catch (error) {
   console.error('❌ Route import failed:', error.message);
   process.exit(1);

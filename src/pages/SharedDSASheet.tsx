@@ -127,8 +127,6 @@ export default function SharedDSASheets() {
                sheet.friends.user_id_2 === session.user.id;
       });
 
-
-    console.log('✅ Loaded sheets:', enrichedSheets.length);
     setSheets(enrichedSheets);
     setLoading(false);
   }, [navigate, toast]);

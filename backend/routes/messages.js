@@ -26,7 +26,6 @@ router.use((req, res, next) => {
 });
 
 router.post('/send', async (req, res) => {
-  console.log('📨 BACKEND RECEIVED:', req.body);
   
   const { chat_id, sender_id, message, channel } = req.body;
 
@@ -53,7 +52,6 @@ router.post('/send', async (req, res) => {
 
       if (error) throw error;
       newMessage = data;
-      console.log('✅ DB Saved:', newMessage.id);
     } else {
       // Fallback: generate ID for Pusher
       newMessage = {
@@ -63,7 +61,6 @@ router.post('/send', async (req, res) => {
         message: message.trim(),
         created_at: new Date().toISOString()
       };
-      console.log('✅ Pusher-only message (no DB)');
     }
 
     // 2. ✅ PUSHER broadcast (always works)
@@ -80,8 +77,6 @@ router.post('/send', async (req, res) => {
     await req.pusher.trigger(channel, 'new-message', pusherData, {
       socket_id: socketId
     });
-
-    console.log(`✅ SENT TO: ${channel}`);
     res.json(newMessage);
   } catch (error) {
     console.error('❌ ERROR:', error);

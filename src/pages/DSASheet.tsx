@@ -76,8 +76,6 @@ export default function DSASheet() {
         return;
       }
 
-
-      console.log("✅ User ID:", session.user.id);
       setUserId(session.user.id);
       
       await loadAllDataWithRetry();
@@ -110,8 +108,6 @@ export default function DSASheet() {
 
 
       if (foldersError) throw new Error(`Folders error: ${foldersError.message}`);
-      
-      console.log("✅ Folders loaded:", foldersData?.length || 0);
 
 
       if (!foldersData?.length) {
@@ -135,8 +131,6 @@ export default function DSASheet() {
         console.error("Problems error:", problemsError);
         throw new Error(`Problems error: ${problemsError.message}`);
       }
-      
-      console.log("✅ Problems loaded:", problemsData?.length || 0);
 
 
       // STEP 3: Group problems by folder

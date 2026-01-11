@@ -40,7 +40,7 @@ export function HowItWorks() {
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Get Started in{" "}
-            <span className="text-gradient">4 Simple Steps</span>
+            <span className="text-gradient">5 Simple Steps</span>
           </h2>
           <p className="text-lg text-muted-foreground">
             From sign up to solving problems together, we've made it simple to find your perfect DSA partner.
